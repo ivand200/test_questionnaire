@@ -121,7 +121,8 @@ export function ReviewPanel({ questionId }: { questionId: string }) {
       {q.edited && <p>Edited by reviewer · not reused until approved</p>}
       {q.approved && (
         <p>
-          Approved by {q.approved.approver} · {new Date(q.approved.approved_at).toLocaleString()}
+          {q.status === "needs_review" ? "Previously approved by" : "Approved by"}{" "}
+          {q.approved.approver} · {new Date(q.approved.approved_at).toLocaleString()}
         </p>
       )}
       {q.note && <p>Note: {q.note}</p>}
@@ -135,8 +136,8 @@ export function ReviewPanel({ questionId }: { questionId: string }) {
       {saveEdit.isError && <p role="alert">{saveEdit.error.message}</p>}
       {q.warnings.length > 0 && (
         <ul>
-          {q.warnings.map((w) => (
-            <li key={`${w.kind}:${w.passage_id ?? ""}`}>{w.message}</li>
+          {q.warnings.map((w, i) => (
+            <li key={`${w.kind}:${w.passage_id ?? ""}:${i}`}>{w.message}</li>
           ))}
         </ul>
       )}
@@ -148,6 +149,11 @@ export function ReviewPanel({ questionId }: { questionId: string }) {
               <li key={c.passage_id}>
                 <strong>{c.passage_id}</strong>
                 {c.version != null && <> (version {c.version})</>}
+                {c.version != null &&
+                  c.current_version != null &&
+                  c.current_version !== c.version && (
+                    <> approved on v{c.version}, now v{c.current_version}</>
+                  )}
                 <blockquote>{c.excerpt}</blockquote>
               </li>
             ))}

@@ -4,13 +4,14 @@ import { useState } from "react";
 
 import { api } from "../api/client";
 
-type Status = "new" | "draft" | "unresolved" | "approved" | "error";
+type Status = "new" | "draft" | "unresolved" | "approved" | "needs_review" | "error";
 
 const FILTERS: { label: string; status: Status | undefined }[] = [
   { label: "All", status: undefined },
   { label: "Draft", status: "draft" },
   { label: "Unresolved", status: "unresolved" },
   { label: "Approved", status: "approved" },
+  { label: "Needs review", status: "needs_review" },
   { label: "Error", status: "error" },
   { label: "Not asked", status: "new" },
 ];
@@ -60,7 +61,8 @@ export function Queue() {
       {summary.data && (
         <p>
           Not asked {summary.data.new} · Draft {summary.data.draft} · Unresolved{" "}
-          {summary.data.unresolved} · Approved {summary.data.approved} · Error{" "}
+          {summary.data.unresolved} · Approved {summary.data.approved} · Needs review{" "}
+          {summary.data.needs_review} · Error{" "}
           {summary.data.error} · Answered {summary.data.answered}
         </p>
       )}
