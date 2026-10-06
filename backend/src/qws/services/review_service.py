@@ -3,8 +3,7 @@ from datetime import UTC, datetime
 
 from qws.adapters.store import Store
 from qws.core import rules
-from qws.core.models import Action, ApprovedRow, QuestionView
-from qws.services.draft_service import UnknownQuestion
+from qws.core.models import Action, ApprovedRow, QuestionView, UnknownQuestion
 
 
 @dataclass(frozen=True)

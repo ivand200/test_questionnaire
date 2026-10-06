@@ -16,6 +16,7 @@ from qws.core.models import (
     Reply,
     Status,
     SummaryCounts,
+    ViewCitation,
     Warning,
 )
 
@@ -69,6 +70,20 @@ def source_versions(
         for c in citations
         if (document_id := document_of.get(c.passage_id)) in version_of
     }
+
+
+def versioned_citations(
+    citations: list[Citation], snapshot: dict[str, int] | None, passages: list[PassageRow]
+) -> list[ViewCitation]:
+    """Each citation with the version of its document from the snapshot; None without a snapshot."""
+    document_of = {p.id: p.document_id for p in passages}
+    return [
+        ViewCitation(
+            **c.model_dump(),
+            version=snapshot.get(document_of.get(c.passage_id, "")) if snapshot else None,
+        )
+        for c in citations
+    ]
 
 
 def normalize_text(text: str) -> str:

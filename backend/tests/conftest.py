@@ -9,6 +9,8 @@ from qws.config import REPLAY_PATH, SEED_PATH
 from qws.services.draft_service import Drafter
 
 ALL = [f"Q{n}" for n in range(1, 10)]  # Q1 to Q8 from the Seed file, Q9 from the Demo file
+EDIT = "No. CSV export needs a paid plan."
+ORIGINAL = "No. Free-plan users cannot export CSV; CSV exports are available only on paid plans."
 
 
 @pytest.fixture(autouse=True)
@@ -42,3 +44,21 @@ def model_calls(tmp_path: Path, question_id: str) -> list[tuple]:
 
 def call_count(tmp_path: Path, question_id: str) -> int:
     return len(model_calls(tmp_path, question_id))
+
+
+def draft_row(tmp_path, question_id: str) -> dict | None:
+    conn = sqlite3.connect(tmp_path / "test.db")
+    conn.row_factory = sqlite3.Row
+    try:
+        row = conn.execute("SELECT * FROM draft WHERE question_id = ?", (question_id,)).fetchone()
+        return dict(row) if row else None
+    finally:
+        conn.close()
+
+
+def approved_count(tmp_path) -> int:
+    conn = sqlite3.connect(tmp_path / "test.db")
+    try:
+        return conn.execute("SELECT COUNT(*) FROM approved_answer").fetchone()[0]
+    finally:
+        conn.close()

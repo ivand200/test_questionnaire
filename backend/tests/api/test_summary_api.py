@@ -62,10 +62,11 @@ def test_filter_draft_returns_seed_order(tmp_path):
 
         # WHEN the client sends GET /api/questions?status=draft
         response = client.get("/api/questions", params={"status": "draft"})
+        everything = client.get("/api/questions").json()
 
-        # THEN Q3, Q4, Q5, Q6, Q7, Q8 in this order; without status all 9 come back
-        assert [q["id"] for q in response.json()] == ["Q3", "Q4", "Q5", "Q6", "Q7", "Q8"]
-        assert len(client.get("/api/questions").json()) == 9
+    # THEN Q3, Q4, Q5, Q6, Q7, Q8 in this order; without status all 9 come back
+    assert [q["id"] for q in response.json()] == ["Q3", "Q4", "Q5", "Q6", "Q7", "Q8"]
+    assert len(everything) == 9
 
 
 def test_an_unknown_status_filter_gives_422(tmp_path):

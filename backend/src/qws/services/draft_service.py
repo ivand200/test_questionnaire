@@ -16,6 +16,7 @@ from qws.core.models import (
     QuestionRow,
     QuestionView,
     Reply,
+    UnknownQuestion,
 )
 
 INVALID_REPLY = "Model reply was not valid."
@@ -35,10 +36,6 @@ class DrafterConfig:
 
 class Conflict:
     """The question already has a draft or an unresolved result, or is being asked right now."""
-
-
-class UnknownQuestion:
-    """No question has this ID."""
 
 
 @dataclass(frozen=True)

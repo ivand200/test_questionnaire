@@ -1,27 +1,4 @@
-import sqlite3
-
-from conftest import call_count, make_client
-
-EDIT = "No. CSV export needs a paid plan."
-ORIGINAL = "No. Free-plan users cannot export CSV; CSV exports are available only on paid plans."
-
-
-def draft_row(tmp_path, question_id: str) -> dict | None:
-    conn = sqlite3.connect(tmp_path / "test.db")
-    conn.row_factory = sqlite3.Row
-    try:
-        row = conn.execute("SELECT * FROM draft WHERE question_id = ?", (question_id,)).fetchone()
-        return dict(row) if row else None
-    finally:
-        conn.close()
-
-
-def approved_count(tmp_path) -> int:
-    conn = sqlite3.connect(tmp_path / "test.db")
-    try:
-        return conn.execute("SELECT COUNT(*) FROM approved_answer").fetchone()[0]
-    finally:
-        conn.close()
+from conftest import EDIT, ORIGINAL, approved_count, call_count, draft_row, make_client
 
 
 def edited_q1(tmp_path):

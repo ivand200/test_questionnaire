@@ -116,16 +116,17 @@ class Store:
         else:
             answer = (draft.reviewer_answer or draft.model_answer) if draft else None
         # Computed on every read and never saved.
-        replaced, superseded = rules.superseded_evidence(
-            citations, self.list_documents(), self.list_passages()
-        )
+        documents, passages = self.list_documents(), self.list_passages()
+        replaced, superseded = rules.superseded_evidence(citations, documents, passages)
         return QuestionView(
             id=question.id,
             topic=question.topic,
             text=question.text,
             status=status,
             answer=answer,
-            citations=citations,
+            citations=rules.versioned_citations(
+                citations, approval.source_versions if approval else None, passages
+            ),
             warnings=([] if approval else draft.warnings if draft else []) + superseded,
             owner=self.get_owner(question.topic),
             replaced=replaced,

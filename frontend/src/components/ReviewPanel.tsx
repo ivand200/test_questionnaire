@@ -147,7 +147,7 @@ export function ReviewPanel({ questionId }: { questionId: string }) {
             {q.citations.map((c) => (
               <li key={c.passage_id}>
                 <strong>{c.passage_id}</strong>
-                {q.approved && <> (version {q.approved.source_versions[c.passage_id.split(":")[0]]})</>}
+                {c.version != null && <> (version {c.version})</>}
                 <blockquote>{c.excerpt}</blockquote>
               </li>
             ))}

@@ -1,7 +1,6 @@
-from conftest import ALL, call_count, make_client
+from conftest import ALL, EDIT, call_count, make_client
 from qws.core.models import DrafterReply, Prompt
 from test_approve_api import approved_q1, approved_rows
-from test_edit_api import EDIT
 
 
 class FailingDrafter:
@@ -25,13 +24,14 @@ def test_ask_again_on_an_approved_question_returns_the_approved_view_with_no_mod
         # WHEN the client sends POST /api/questions/Q1/draft
         response = client.post("/api/questions/Q1/draft")
 
-    # THEN 200; approved view with the edit, Anna and the snapshot; no Drafter call; 1 model call
+    # THEN 200; approved view with the edit, Anna, the snapshot and the version on each citation; no Drafter call; 1 model call
     assert response.status_code == 200
     body = response.json()
     assert body["status"] == "approved"
     assert body["answer"] == EDIT
     assert body["approved"]["approver"] == "Anna"
     assert body["approved"]["source_versions"] == {"EXPORT-v2": 2}
+    assert [(c["passage_id"], c["version"]) for c in body["citations"]] == [("EXPORT-v2:p1", 2)]
     assert drafter.calls == 0
     assert call_count(tmp_path, "Q1") == 1
     assert len(approved_rows(tmp_path)) == 1

@@ -1,6 +1,5 @@
-from conftest import make_client
+from conftest import EDIT, approved_count, draft_row, make_client
 from test_approve_api import approved_q1
-from test_edit_api import EDIT, approved_count, draft_row
 
 NOTE = "Check with the product team."
 

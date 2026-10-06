@@ -1,8 +1,7 @@
 import json
 import sqlite3
 
-from conftest import call_count, make_client
-from test_edit_api import EDIT, ORIGINAL, approved_count, draft_row
+from conftest import EDIT, ORIGINAL, approved_count, call_count, draft_row, make_client
 
 
 def approved_rows(tmp_path) -> list[dict]:

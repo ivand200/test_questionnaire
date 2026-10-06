@@ -94,9 +94,17 @@ def test_superseded_evidence_ignores_a_cited_document_that_replaces_nothing():
 
 def test_status_is_approved_over_the_draft_status_else_draft_else_new():
     # spec: 4.1-a, 4.5-a
-    assert question_status(True, "draft") == "approved"
-    assert question_status(False, "unresolved") == "unresolved"
-    assert question_status(False, None) == "new"
+    # GIVEN an approved answer, or a draft status, or neither
+
+    # WHEN the status is computed
+    approved = question_status(True, "draft")
+    unresolved = question_status(False, "unresolved")
+    new = question_status(False, None)
+
+    # THEN approved wins over the draft status; else the draft status; else new
+    assert approved == "approved"
+    assert unresolved == "unresolved"
+    assert new == "new"
 
 
 def test_source_versions_has_only_cited_documents_never_replaced_ones():

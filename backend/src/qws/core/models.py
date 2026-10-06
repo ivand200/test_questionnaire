@@ -85,6 +85,17 @@ class Citation(BaseModel):
     excerpt: str
 
 
+class ViewCitation(Citation):
+    """A citation as the view shows it. `version` is the cited document's version in the approved
+    snapshot; None while the answer is not approved."""
+
+    version: int | None = None
+
+
+class UnknownQuestion:
+    """No question has this ID."""
+
+
 class Warning(BaseModel):
     kind: Literal["citation_not_found", "no_citation", "superseded"]
     passage_id: str | None = None
@@ -206,7 +217,7 @@ class QuestionView(BaseModel):
     text: str
     status: Status
     answer: str | None
-    citations: list[Citation]
+    citations: list[ViewCitation]
     warnings: list[Warning]
     owner: str | None
     replaced: list[ReplacedEvidence]

@@ -178,13 +178,6 @@ export interface components {
             /** Approver */
             approver: string;
         };
-        /** Citation */
-        Citation: {
-            /** Passage Id */
-            passage_id: string;
-            /** Excerpt */
-            excerpt: string;
-        };
         /** EditRequest */
         EditRequest: {
             /** Answer */
@@ -242,7 +235,7 @@ export interface components {
             /** Answer */
             answer: string | null;
             /** Citations */
-            citations: components["schemas"]["Citation"][];
+            citations: components["schemas"]["ViewCitation"][];
             /** Warnings */
             warnings: components["schemas"]["Warning"][];
             /** Owner */
@@ -305,6 +298,19 @@ export interface components {
             input?: unknown;
             /** Context */
             ctx?: Record<string, never>;
+        };
+        /**
+         * ViewCitation
+         * @description A citation as the view shows it. `version` is the cited document's version in the approved
+         *     snapshot; None while the answer is not approved.
+         */
+        ViewCitation: {
+            /** Passage Id */
+            passage_id: string;
+            /** Excerpt */
+            excerpt: string;
+            /** Version */
+            version?: number | null;
         };
         /** Warning */
         Warning: {

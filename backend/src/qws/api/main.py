@@ -16,13 +16,12 @@ from qws.config import (
     drafter_config,
     open_store,
 )
-from qws.core.models import ApproveRequest, EditRequest, LeaveOpenRequest, LoadIssue, QuestionSummary, QuestionView, RunAllResult, Status, SummaryCounts
+from qws.core.models import ApproveRequest, EditRequest, LeaveOpenRequest, LoadIssue, QuestionSummary, QuestionView, RunAllResult, Status, SummaryCounts, UnknownQuestion
 from qws.services.draft_service import (
     Conflict,
     DraftService,
     Drafter,
     DrafterConfig,
-    UnknownQuestion,
 )
 from qws.services.review_service import NotAllowed, ReviewService
 
