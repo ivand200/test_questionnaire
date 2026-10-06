@@ -1,21 +1,15 @@
 """`make record`: ask the real model for the recording questions and save the replies."""
 
-import json
 import os
 import sys
-from datetime import UTC, datetime
 from pathlib import Path
-
-from pydantic import ValidationError
 
 from qws.adapters.real_drafter import RealDrafter
 from qws.adapters.replay_file import add_entry
 from qws.adapters.store import Store
-from qws.config import DEFAULT_DB_PATH, REPLAY_PATH, SEED_PATH, drafter_config
-from qws.core import rules
-from qws.core.models import ModelCallRow, ReplayEntry, Reply
-from qws.services import seed_loader
-from qws.services.draft_service import Drafter, DrafterConfig
+from qws.config import REPLAY_PATH, drafter_config, open_store
+from qws.core.models import ReplayEntry
+from qws.services.draft_service import Drafter, DrafterConfig, attempt
 
 RECORDING_LIST = ["Q3"]
 
@@ -27,62 +21,33 @@ class Recorder:
 
     def record(self, question_ids: list[str], drafter: Drafter, path: Path) -> list[str]:
         """Save one model call and one replay entry per question. Returns a message per failure."""
-        passages = rules.current_passages(
-            self._store.list_documents(), self._store.list_passages()
-        )
         failures: list[str] = []
         for question_id in question_ids:
             question = self._store.get_question(question_id)
             if question is None:
                 failures.append(f"{question_id}: unknown question.")
                 continue
-            prompt = rules.build_prompt(question, passages, self._config.model, self._config.settings)
-            reply = drafter.draft(prompt)
-
-            error = reply.error
-            if error is None:
-                try:
-                    Reply.model_validate_json(reply.raw_reply or "")
-                except ValidationError:
-                    error = "Model reply was not valid."
-            now = datetime.now(UTC).isoformat()
-            self._store.save_model_call(
-                ModelCallRow(
-                    question_id=question_id,
-                    input_hash=prompt.input_hash,
-                    prompt=prompt.model_dump_json(include={"system", "user"}),
-                    model=reply.model,
-                    settings=reply.settings,
-                    raw_response=reply.raw_reply,
-                    error=error,
-                    label=reply.label,
-                    created_at=now,
-                    latency_ms=reply.latency_ms,
-                    input_tokens=reply.input_tokens,
-                    output_tokens=reply.output_tokens,
-                )
-            )
-            if error is not None or reply.raw_reply is None:
-                failures.append(f"{question_id}: {error}")
+            call = attempt(self._store, drafter, self._config, question).call
+            self._store.save_model_call(call)
+            if call.error is not None or call.raw_response is None:
+                failures.append(f"{question_id}: {call.error}")
                 continue
             add_entry(
                 path,
                 ReplayEntry(
-                    input_hash=prompt.input_hash,
-                    label=reply.label,
-                    model=reply.model,
-                    settings=reply.settings,
-                    raw_response=reply.raw_reply,
-                    recorded_at=now,
+                    input_hash=call.input_hash,
+                    label=call.label,
+                    model=call.model,
+                    settings=call.settings,
+                    raw_response=call.raw_response,
+                    recorded_at=call.created_at,
                 ),
             )
         return failures
 
 
 def main() -> int:
-    store = Store(os.environ.get("DB_PATH") or DEFAULT_DB_PATH)
-    store.init_schema()
-    seed_loader.load(json.loads(SEED_PATH.read_text()), store)
+    store, _ = open_store()
     config = drafter_config()
     drafter = RealDrafter(config.model, os.environ.get("OPENAI_API_KEY", ""), config.settings)
     failures = Recorder(store, config).record(RECORDING_LIST, drafter, REPLAY_PATH)

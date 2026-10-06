@@ -149,6 +149,13 @@ class DraftRow(BaseModel):
     error: str | None = None  # read from the model call; never written here
 
 
+class QuestionSummary(BaseModel):
+    id: str
+    topic: str
+    text: str
+    status: Status
+
+
 class QuestionView(BaseModel):
     id: str
     topic: str

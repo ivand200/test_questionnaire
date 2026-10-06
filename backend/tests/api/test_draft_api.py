@@ -1,6 +1,7 @@
 import copy
 import json
 import sqlite3
+import threading
 from pathlib import Path
 
 import pytest
@@ -75,7 +76,10 @@ def test_asking_for_q3_saves_a_draft_with_the_exact_passage_as_excerpt(tmp_path)
         assert body["status"] == "draft"
         assert body["answer"] == "Monday to Friday, 09:00–17:00 UTC"
         assert body["citations"] == [{"passage_id": "SUPPORT-v1:p1", "excerpt": SUPPORT_EXCERPT}]
-        assert client.get("/api/questions").json()[2]["status"] == "draft"  # spec: 5.1-b
+        # spec: 5.1-b
+        statuses = {q["id"]: q["status"] for q in client.get("/api/questions").json()}
+        assert statuses["Q3"] == "draft"
+        assert {s for i, s in statuses.items() if i != "Q3"} == {"new"}
     assert len(db_rows(tmp_path, "model_call")) == 1
 
 
@@ -241,10 +245,11 @@ def test_an_empty_citation_list_gives_unresolved_and_no_citation(tmp_path):
     assert [w["kind"] for w in body["warnings"]] == ["no_citation"]
 
 
-def test_the_verdict_not_documented_gives_unresolved_with_no_warning(tmp_path):
+@pytest.mark.parametrize("verdict", ["not_documented", "conflict"])
+def test_the_verdict_not_documented_or_conflict_gives_unresolved_with_no_warning(tmp_path, verdict):
     # spec: 3.2-a
-    # GIVEN the Drafter replies not_documented, citations []
-    raw = reply_json("not_documented", "Not in our documents.", [])
+    # GIVEN the Drafter replies not_documented (or conflict), citations []
+    raw = reply_json(verdict, "Not in our documents.", [])
     with make_client(tmp_path, FakeDrafter(ok(raw))) as client:
         # WHEN the user asks for a draft of Q2
         body = client.post("/api/questions/Q2/draft").json()
@@ -266,6 +271,34 @@ def test_a_raw_reply_that_is_not_valid_gives_error_and_no_answer(tmp_path):
     assert body["error"] == "Model reply was not valid."
     assert body["answer"] is None
     assert db_rows(tmp_path, "model_call")[0]["raw_response"] == "not json"
+
+
+def test_a_failed_real_call_never_shows_the_key(tmp_path, monkeypatch):
+    # spec: 4.3-a
+    # GIVEN MODEL_MODE is real; OPENAI_API_KEY is set; the provider error text contains the key
+    key = "sk-fake-key-123"
+    monkeypatch.setenv("MODEL_MODE", "real")
+    monkeypatch.setenv("OPENAI_API_KEY", key)
+
+    def rejects(messages, info):
+        raise RuntimeError(f"Incorrect API key provided: {key}")
+
+    monkeypatch.setattr(
+        "qws.api.main.RealDrafter",
+        lambda name, api_key, settings: RealDrafter(
+            name, api_key, settings, model=FunctionModel(rejects)
+        ),
+    )
+    with make_client(tmp_path) as client:
+        # WHEN the user asks for a draft of Q3
+        body = client.post("/api/questions/Q3/draft").json()
+
+    # THEN Q3 has status error; a short message; no key and no Traceback, here or in the saved call
+    assert body["status"] == "error"
+    assert body["error"]
+    assert key not in body["error"]
+    assert "Traceback" not in body["error"]
+    assert key not in json.dumps(db_rows(tmp_path, "model_call"))
 
 
 def test_real_mode_with_no_key_gives_a_short_error_without_key_or_traceback(tmp_path, monkeypatch):
@@ -322,6 +355,55 @@ def test_a_real_drafter_returns_the_raw_reply_and_the_token_counts(tmp_path):
     assert call["input_tokens"] > 0
     assert call["output_tokens"] > 0
     assert call["latency_ms"] is not None
+
+
+def test_a_real_reply_that_is_not_valid_keeps_its_raw_text_and_gives_error(tmp_path):
+    # spec: 2.6-a, 3.3-a
+    # GIVEN the real adapter on a fake model that replies with text that is not the reply schema
+    model = FunctionModel(lambda messages, info: ModelResponse(parts=[TextPart("not json")]))
+    drafter = RealDrafter("m1", "k", MODEL_SETTINGS, model=model)
+    with make_client(tmp_path, drafter) as client:
+        # WHEN the user asks for a draft of Q3
+        body = client.post("/api/questions/Q3/draft").json()
+
+    # THEN Q3 has status error with the message; the model call keeps the raw reply
+    assert body["status"] == "error"
+    assert body["error"] == "Model reply was not valid."
+    [call] = db_rows(tmp_path, "model_call")
+    assert call["raw_response"] == "not json"
+    assert call["error"] == "Model reply was not valid."
+    assert call["label"] == "real"
+
+
+def test_two_requests_at_once_for_a_new_question_make_one_model_call(tmp_path):
+    # spec: 2.1-a, 2.4-a
+    # GIVEN Q3 is new and the first request is waiting for the Drafter
+    entered, release = threading.Event(), threading.Event()
+
+    class SlowDrafter(FakeDrafter):
+        def draft(self, prompt: Prompt) -> DrafterReply:
+            entered.set()
+            assert release.wait(5)
+            return super().draft(prompt)
+
+    drafter = SlowDrafter(ok())
+    with make_client(tmp_path, drafter) as client:
+        first: list = []
+        thread = threading.Thread(target=lambda: first.append(client.post("/api/questions/Q3/draft")))
+        thread.start()
+        assert entered.wait(5)
+
+        # WHEN a second request for Q3 arrives before the first one is done
+        second = client.post("/api/questions/Q3/draft")
+        release.set()
+        thread.join(5)
+
+    # THEN the second gets 409; the Drafter is called once; there is one model call
+    assert second.status_code == 409
+    assert first[0].status_code == 200
+    assert first[0].json()["status"] == "draft"
+    assert len(drafter.prompts) == 1
+    assert len(db_rows(tmp_path, "model_call")) == 1
 
 
 def test_get_question_returns_the_draft_view_with_allowed_actions(tmp_path):

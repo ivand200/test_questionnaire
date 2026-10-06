@@ -7,11 +7,9 @@ from qws.core.models import (
     Checked,
     Citation,
     DocumentRow,
-    DraftRow,
     PassageRow,
     Prompt,
     QuestionRow,
-    QuestionView,
     Reply,
     Warning,
 )
@@ -117,21 +115,3 @@ def check_reply(reply: Reply, passages: list[PassageRow]) -> Checked:
         warnings=warnings,
     )
 
-
-def question_view(question: QuestionRow, draft: DraftRow | None) -> QuestionView:
-    if draft is None:
-        status, actions = "new", ["generate"]
-    else:
-        status = draft.status
-        actions = ["retry"] if status == "error" else []
-    return QuestionView(
-        id=question.id,
-        topic=question.topic,
-        text=question.text,
-        status=status,
-        answer=draft.model_answer if draft else None,
-        citations=draft.citations if draft else [],
-        warnings=draft.warnings if draft else [],
-        error=draft.error if draft and status == "error" else None,
-        allowed_actions=actions,
-    )

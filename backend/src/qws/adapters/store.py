@@ -3,6 +3,7 @@ import sqlite3
 from collections.abc import Iterator
 from contextlib import contextmanager
 from pathlib import Path
+from typing import Literal, cast
 
 from qws.core.models import (
     DocumentRow,
@@ -11,9 +12,21 @@ from qws.core.models import (
     OwnerRow,
     PassageRow,
     QuestionRow,
+    QuestionSummary,
+    QuestionView,
+    Status,
 )
 
 SCHEMA_PATH = Path(__file__).resolve().parents[3] / "schema.sql"
+
+
+def _status(draft_status: str | None) -> Status:
+    """The one place that sets a question's status: the draft row status, else new."""
+    return cast(Status, draft_status or "new")
+
+
+def _allowed_actions(status: Status) -> list[Literal["generate", "retry"]]:
+    return {"new": ["generate"], "error": ["retry"]}.get(status, [])
 
 
 class Store:
@@ -69,15 +82,39 @@ class Store:
                 [q.model_dump() for q in questions],
             )
 
-    def list_questions(self) -> list[dict[str, str]]:
-        """Every question in Seed order with its computed status."""
+    def list_questions(self) -> list[QuestionSummary]:
+        """Every question in Seed order with its status."""
         with self._connect() as conn:
             rows = conn.execute(
-                "SELECT q.id, q.topic, q.text, COALESCE(d.status, 'new') AS status"
+                "SELECT q.id, q.topic, q.text, d.status AS draft_status"
                 " FROM question q LEFT JOIN draft d ON d.question_id = q.id"
                 " ORDER BY q.rowid"
             ).fetchall()
-        return [dict(r) for r in rows]
+        return [
+            QuestionSummary(
+                id=r["id"], topic=r["topic"], text=r["text"], status=_status(r["draft_status"])
+            )
+            for r in rows
+        ]
+
+    def get_question_view(self, question_id: str) -> QuestionView | None:
+        """The question with its status, draft, error message and allowed actions."""
+        question = self.get_question(question_id)
+        if question is None:
+            return None
+        draft = self.get_draft(question_id)
+        status = _status(draft.status if draft else None)
+        return QuestionView(
+            id=question.id,
+            topic=question.topic,
+            text=question.text,
+            status=status,
+            answer=draft.model_answer if draft else None,
+            citations=draft.citations if draft else [],
+            warnings=draft.warnings if draft else [],
+            error=draft.error if draft and status == "error" else None,
+            allowed_actions=_allowed_actions(status),
+        )
 
     def get_question(self, question_id: str) -> QuestionRow | None:
         with self._connect() as conn:

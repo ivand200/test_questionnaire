@@ -1,27 +1,21 @@
-import json
 import os
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Literal
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel
 
 from qws.adapters.real_drafter import RealDrafter
 from qws.adapters.replay_drafter import ReplayDrafter
-from qws.adapters.store import Store
 from qws.config import (
-    DEFAULT_DB_PATH,
     REPLAY_PATH,
     REPO_DIR,
     SEED_PATH,
     drafter_config,
+    open_store,
 )
-from qws.core import rules
-from qws.core.models import LoadIssue, QuestionView
-from qws.services import seed_loader
+from qws.core.models import LoadIssue, QuestionSummary, QuestionView
 from qws.services.draft_service import (
     Conflict,
     DraftService,
@@ -31,13 +25,6 @@ from qws.services.draft_service import (
 )
 
 DIST_DIR = REPO_DIR / "frontend" / "dist"
-
-
-class QuestionSummary(BaseModel):
-    id: str
-    topic: str
-    text: str
-    status: Literal["new", "draft", "unresolved", "error"]
 
 
 class LazyStaticFiles(StaticFiles):
@@ -63,10 +50,8 @@ def create_app(
 ) -> FastAPI:
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
-        store = Store(db_path or os.environ.get("DB_PATH") or DEFAULT_DB_PATH)
-        store.init_schema()
+        store, app.state.load_issues = open_store(db_path, seed_path)
         app.state.store = store
-        app.state.load_issues = seed_loader.load(json.loads(seed_path.read_text()), store)
         config = drafter_config()
         app.state.service = DraftService(
             store, drafter or drafter_from_env(config, replay_path), config
@@ -85,15 +70,14 @@ def create_app(
 
     @app.get("/api/questions")
     def questions(request: Request) -> list[QuestionSummary]:
-        return [QuestionSummary(**q) for q in request.app.state.store.list_questions()]
+        return request.app.state.store.list_questions()
 
     @app.get("/api/questions/{question_id}")
     def question(question_id: str, request: Request) -> QuestionView:
-        store: Store = request.app.state.store
-        found = store.get_question(question_id)
-        if found is None:
+        view = request.app.state.store.get_question_view(question_id)
+        if view is None:
             raise HTTPException(404, f"Unknown question {question_id}.")
-        return rules.question_view(found, store.get_draft(question_id))
+        return view
 
     @app.post("/api/questions/{question_id}/draft")
     def draft(question_id: str, request: Request) -> QuestionView:

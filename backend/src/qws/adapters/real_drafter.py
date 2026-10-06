@@ -2,9 +2,9 @@ import time
 
 import openai
 from openai import AsyncOpenAI
-from pydantic import ValidationError
-from pydantic_ai import Agent, NativeOutput
+from pydantic_ai import Agent, NativeOutput, capture_run_messages
 from pydantic_ai.exceptions import ModelHTTPError, UnexpectedModelBehavior
+from pydantic_ai.messages import ModelResponse
 from pydantic_ai.models import Model
 from pydantic_ai.models.openai import OpenAIResponsesModel
 from pydantic_ai.providers.openai import OpenAIProvider
@@ -25,8 +25,6 @@ def short_error(error: Exception) -> str:
     chain = list(_chain(error))
     if any(isinstance(e, (TimeoutError, openai.APITimeoutError)) for e in chain):
         return "Model call failed: timeout."
-    if any(isinstance(e, (UnexpectedModelBehavior, ValidationError)) for e in chain):
-        return "Model reply was not valid."
     for e in chain:
         if isinstance(e, ModelHTTPError):
             return f"Model call failed: HTTP {e.status_code}."
@@ -70,9 +68,23 @@ class RealDrafter:
                 instructions=prompt.system,
                 retries=0,
             )
-            result = agent.run_sync(
-                prompt.user, model_settings={**self._settings, "timeout": TIMEOUT_SECONDS}
-            )
+            with capture_run_messages() as messages:
+                try:
+                    result = agent.run_sync(
+                        prompt.user, model_settings={**self._settings, "timeout": TIMEOUT_SECONDS}
+                    )
+                except UnexpectedModelBehavior:
+                    # The model answered but the reply does not fit the schema: hand the
+                    # raw text back so it is saved; DraftService judges it.
+                    last = messages[-1] if messages else None
+                    if not isinstance(last, ModelResponse) or not last.text:
+                        raise
+                    return self._reply(
+                        raw_reply=last.text,
+                        latency_ms=round((time.monotonic() - started) * 1000),
+                        input_tokens=last.usage.input_tokens,
+                        output_tokens=last.usage.output_tokens,
+                    )
             usage = result.usage
             return self._reply(
                 raw_reply=result.response.text or result.output.model_dump_json(),
