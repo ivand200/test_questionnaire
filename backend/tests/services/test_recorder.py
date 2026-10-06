@@ -10,7 +10,7 @@ from qws.adapters.store import Store
 from qws.config import DEMO_PATH, MODEL_SETTINGS, SEED_PATH
 from qws.services import seed_loader
 from qws.services.draft_service import DrafterConfig
-from qws.services.recorder import Recorder
+from qws.services.recorder import RECORDING_LIST, Recorder
 
 KEY = "secret-key-123"
 RAW = json.dumps(
@@ -100,3 +100,22 @@ def test_the_recorder_writes_a_simulated_entry_for_q9_and_never_asks_the_real_mo
     assert entry["label"] == "simulated"
     assert entry["error"] == "Model call failed: timeout."
     assert "raw_response" not in entry
+
+
+def test_the_recording_list_is_q1_to_q8_and_a_second_run_keeps_one_entry_per_hash(tmp_path):
+    # spec: 5.1-a
+    # GIVEN a fake model that replies for each question; an empty Replay file
+    recorder, drafter = make_recorder(tmp_path)
+    path = tmp_path / "responses.json"
+    assert RECORDING_LIST == ["Q1", "Q2", "Q3", "Q4", "Q5", "Q6", "Q7", "Q8"]
+
+    # WHEN the Recorder runs the recording list
+    failures = recorder.record(RECORDING_LIST, drafter, path)
+
+    # THEN the file has 8 entries with 8 different input hashes
+    assert failures == []
+    assert len({e["input_hash"] for e in json.loads(path.read_text())}) == 8
+
+    # AND a second run still has 8
+    recorder.record(RECORDING_LIST, drafter, path)
+    assert len(json.loads(path.read_text())) == 8

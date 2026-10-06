@@ -1,17 +1,5 @@
 [
   {
-    "input_hash": "69bedcc14f2317f761f1bb6dab611caa2269a24e0352d409ce0310959c372c16",
-    "label": "real",
-    "model": "gpt-6-luna",
-    "settings": {
-      "temperature": 0,
-      "max_tokens": 1000,
-      "openai_reasoning_effort": "medium"
-    },
-    "raw_response": "{\"answer\":\"Email support is available Monday to Friday, 09:00 to 17:00 UTC.\",\"verdict\":\"supported\",\"citations\":[\"SUPPORT-v1:p1\"]}",
-    "recorded_at": "2026-10-06T15:49:03.720414+00:00"
-  },
-  {
     "input_hash": "e741a8a50abf8bcc9fe9f82db2f7e771d39002cef9da177eaf86a138a2244ef0",
     "label": "simulated",
     "model": "gpt-6-luna",
@@ -21,6 +9,102 @@
       "openai_reasoning_effort": "medium"
     },
     "error": "Model call failed: timeout.",
-    "recorded_at": "2026-10-06T19:16:39.918121+00:00"
+    "recorded_at": "2026-10-06T19:19:23.675161+00:00"
+  },
+  {
+    "input_hash": "72b7383a0faf5d96639fd3a8855b9ba89746789016ed9e136d882840fd9135f1",
+    "label": "real",
+    "model": "gpt-6-luna",
+    "settings": {
+      "temperature": 0,
+      "max_tokens": 1000,
+      "openai_reasoning_effort": "medium"
+    },
+    "raw_response": "{\"answer\":\"No. Free-plan users cannot export CSV; CSV exports are available only on paid plans.\",\"verdict\":\"supported\",\"citations\":[\"EXPORT-v2:p1\"]}",
+    "recorded_at": "2026-10-06T19:19:27.611282+00:00"
+  },
+  {
+    "input_hash": "0a30d3a748d117a429866dd3016aa1e023c2369643869c65aed60f05c82430af",
+    "label": "real",
+    "model": "gpt-6-luna",
+    "settings": {
+      "temperature": 0,
+      "max_tokens": 1000,
+      "openai_reasoning_effort": "medium"
+    },
+    "raw_response": "{\"answer\":\"JSON export availability is not documented.\",\"verdict\":\"not_documented\",\"citations\":[]}",
+    "recorded_at": "2026-10-06T19:19:29.618747+00:00"
+  },
+  {
+    "input_hash": "69bedcc14f2317f761f1bb6dab611caa2269a24e0352d409ce0310959c372c16",
+    "label": "real",
+    "model": "gpt-6-luna",
+    "settings": {
+      "temperature": 0,
+      "max_tokens": 1000,
+      "openai_reasoning_effort": "medium"
+    },
+    "raw_response": "{\"answer\":\"Email support is available Monday to Friday, 09:00 to 17:00 UTC.\",\"verdict\":\"supported\",\"citations\":[\"SUPPORT-v1:p1\"]}",
+    "recorded_at": "2026-10-06T19:19:31.476580+00:00"
+  },
+  {
+    "input_hash": "e0b322e7ac0fbdaf30702df93599e44f66b0ec1b19950b19fe7a0f396fd54490",
+    "label": "real",
+    "model": "gpt-6-luna",
+    "settings": {
+      "temperature": 0,
+      "max_tokens": 1000,
+      "openai_reasoning_effort": "medium"
+    },
+    "raw_response": "{\"answer\":\"No, live chat is not offered.\",\"verdict\":\"supported\",\"citations\":[\"SUPPORT-v1:p1\"]}",
+    "recorded_at": "2026-10-06T19:19:34.037304+00:00"
+  },
+  {
+    "input_hash": "cff8758f95ea3e578cfafc815cb21da2664927a602df6742e76bc2b35dd69008",
+    "label": "real",
+    "model": "gpt-6-luna",
+    "settings": {
+      "temperature": 0,
+      "max_tokens": 1000,
+      "openai_reasoning_effort": "medium"
+    },
+    "raw_response": "{\"answer\":\"Users sign in with their email and password.\",\"verdict\":\"supported\",\"citations\":[\"ACCESS-v1:p1\"]}",
+    "recorded_at": "2026-10-06T19:19:36.152925+00:00"
+  },
+  {
+    "input_hash": "e5c0ed40de54b29a9dba48729c9dbfe640d729794aa59eb3351c1aaa7bc8d78c",
+    "label": "real",
+    "model": "gpt-6-luna",
+    "settings": {
+      "temperature": 0,
+      "max_tokens": 1000,
+      "openai_reasoning_effort": "medium"
+    },
+    "raw_response": "{\"answer\":\"Account owners can invite team members.\",\"verdict\":\"supported\",\"citations\":[\"ACCESS-v1:p1\"]}",
+    "recorded_at": "2026-10-06T19:19:39.360338+00:00"
+  },
+  {
+    "input_hash": "5d6c6a937f22c075142033bc4ae2d3d744ff886a60ce04bc2ab2f02fe6f25f24",
+    "label": "real",
+    "model": "gpt-6-luna",
+    "settings": {
+      "temperature": 0,
+      "max_tokens": 1000,
+      "openai_reasoning_effort": "medium"
+    },
+    "raw_response": "{\"answer\":\"Subscriptions are billed monthly in USD.\",\"verdict\":\"supported\",\"citations\":[\"BILLING-v1:p1\"]}",
+    "recorded_at": "2026-10-06T19:19:40.995699+00:00"
+  },
+  {
+    "input_hash": "7f4f6af4c7b05b795467307841a863d643d6843037144659a0efd1f270bbdcfb",
+    "label": "real",
+    "model": "gpt-6-luna",
+    "settings": {
+      "temperature": 0,
+      "max_tokens": 1000,
+      "openai_reasoning_effort": "medium"
+    },
+    "raw_response": "{\"answer\":\"Account owners can download billing invoices.\",\"verdict\":\"supported\",\"citations\":[\"BILLING-v1:p1\"]}",
+    "recorded_at": "2026-10-06T19:19:44.737661+00:00"
   }
 ]

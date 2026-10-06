@@ -12,7 +12,7 @@ from qws.config import DEMO_PATH, REPLAY_PATH, drafter_config, open_store
 from qws.core.models import ReplayEntry
 from qws.services.draft_service import Drafter, DrafterConfig, attempt
 
-RECORDING_LIST = ["Q3"]
+RECORDING_LIST = [f"Q{n}" for n in range(1, 9)]  # Q1 to Q8, asked with the real model
 SIMULATED_LIST = ["Q9"]  # written through SimulatedDrafter; the real model is never asked
 
 

@@ -7,8 +7,9 @@ from fastapi.testclient import TestClient
 
 from qws.adapters.replay_drafter import ReplayDrafter
 from qws.api.main import create_app
+from qws.adapters.replay_file import read_entries
 from qws.adapters.store import Store
-from qws.config import REPLAY_PATH, SEED_PATH, drafter_config
+from qws.config import DEMO_PATH, REPLAY_PATH, SEED_PATH, drafter_config
 from qws.core import rules
 from qws.services import seed_loader
 
@@ -104,3 +105,67 @@ def test_changing_the_system_prompt_changes_the_input_hash_and_replay_gives_the_
     # THEN the input hash is not h1; replay mode gives the error of 4.2-a
     assert changed.input_hash != h1.input_hash
     assert drafter.draft(changed).error == "No saved response for this input."
+
+
+def demo_client(tmp_path: Path) -> TestClient:
+    return TestClient(
+        create_app(tmp_path / "dist", tmp_path / "test.db", SEED_PATH, demo_path=DEMO_PATH)
+    )
+
+
+def test_the_committed_replay_file_has_one_entry_for_each_of_the_9_questions(tmp_path):
+    # spec: 5.3-a
+    # GIVEN the committed Replay file and the 9 questions
+    store = Store(tmp_path / "test.db")
+    store.init_schema()
+    seed = json.loads(SEED_PATH.read_text())
+    seed["questions"] += json.loads(DEMO_PATH.read_text())["questions"]
+    seed_loader.load(seed, store)
+    config = drafter_config()
+    passages = rules.current_passages(store.list_documents(), store.list_passages())
+    hashes = [e.input_hash for e in read_entries(REPLAY_PATH)]
+
+    # WHEN the Backend builds the prompt of each
+    built = [
+        rules.build_prompt(q, passages, config.model, config.settings).input_hash
+        for q in map(store.get_question, [f"Q{n}" for n in range(1, 10)])
+    ]
+
+    # THEN each of the 9 input hashes has one entry in the file
+    assert [hashes.count(h) for h in built] == [1] * 9
+
+
+def test_replay_gives_the_expected_q1_q2_and_q3_results(tmp_path):
+    # spec: 5.4-a
+    # GIVEN the committed Replay file; expected-seed-results.json says Q1 cites EXPORT-v2:p1,
+    # Q2 is unresolved with no citation, Q3 cites SUPPORT-v1:p1
+    with demo_client(tmp_path) as client:
+        # WHEN the Backend asks Q1, Q2 and Q3 in replay mode
+        q1, q2, q3 = (client.post(f"/api/questions/{i}/draft").json() for i in ("Q1", "Q2", "Q3"))
+
+    # THEN Q1 is a draft citing only EXPORT-v2:p1; Q2 is unresolved with no citation; Q3 cites SUPPORT-v1:p1
+    assert q1["status"] == "draft"
+    assert [c["passage_id"] for c in q1["citations"]] == ["EXPORT-v2:p1"]
+    assert q2["status"] == "unresolved"
+    assert q2["citations"] == []
+    assert q2["owner"] == "Product reviewer"
+    assert q3["status"] == "draft"
+    assert [c["passage_id"] for c in q3["citations"]] == ["SUPPORT-v1:p1"]
+
+
+def test_run_all_in_replay_mode_with_no_key_shows_every_demo_case(tmp_path):
+    # spec: 4.1-a
+    # GIVEN MODEL_MODE empty, no key, the committed Replay file; all 9 questions are new
+    with demo_client(tmp_path) as client:
+        # WHEN the client sends POST /api/questionnaire/run
+        response = client.post("/api/questionnaire/run")
+        found = {i: client.get(f"/api/questions/{i}").json() for i in (f"Q{n}" for n in range(1, 10))}
+
+    # THEN asked is Q1 to Q9; Q1 is draft; Q2 is unresolved; Q9 is error with label simulated;
+    # Q3 to Q8 are not error
+    assert response.json() == {"asked": [f"Q{n}" for n in range(1, 10)]}
+    assert found["Q1"]["status"] == "draft"
+    assert found["Q2"]["status"] == "unresolved"
+    assert found["Q9"]["status"] == "error"
+    assert found["Q9"]["label"] == "simulated"
+    assert "error" not in {found[f"Q{n}"]["status"] for n in range(3, 9)}
