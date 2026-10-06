@@ -10,7 +10,7 @@ _ENTRIES = TypeAdapter(list[ReplayEntry])
 
 
 def read_entries(path: Path) -> list[ReplayEntry]:
-    """The entries of the replay file; none when the file does not exist. Raises ValueError if invalid."""
+    """The entries of the replay file; none when the file does not exist. Raises ValueError if the file is not valid JSON of entries."""
     if not path.exists():
         return []
     return _ENTRIES.validate_json(path.read_text())

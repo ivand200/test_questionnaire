@@ -25,6 +25,8 @@ class ReplayDrafter:
             return self._reply(error=BAD_FILE)
         for entry in entries:
             if entry.input_hash == prompt.input_hash:
+                if (entry.raw_response is None) == (entry.error is None):  # both or neither
+                    return self._reply(error=BAD_FILE)
                 if entry.error is not None:  # a Simulated entry
                     return self._reply("simulated", error=entry.error)
                 return self._reply(raw_reply=entry.raw_response)

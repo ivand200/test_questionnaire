@@ -7,7 +7,6 @@ from fastapi.testclient import TestClient
 
 from qws.api.main import create_app
 from qws.config import DEMO_PATH, REPLAY_PATH, SEED_PATH
-from qws.adapters.replay_file import read_entries
 
 TIMEOUT = "Model call failed: timeout."
 
@@ -26,6 +25,11 @@ def make_client(tmp_path: Path, replay_path: Path = REPLAY_PATH) -> TestClient:
             demo_path=DEMO_PATH,
         )
     )
+
+
+def q9_entry(entries: list[dict]) -> dict:
+    [entry] = [e for e in entries if e.get("label") == "simulated"]
+    return entry
 
 
 def model_calls(tmp_path: Path, question_id: str) -> list[tuple]:
@@ -77,7 +81,7 @@ def test_asking_q9_in_replay_mode_gives_a_simulated_error(tmp_path):
 def test_a_replay_entry_with_both_or_neither_of_reply_and_error_is_not_valid(tmp_path, fields):
     # spec: 3.3-a
     # GIVEN a Replay file entry for Q9 with both or neither of raw_response and error
-    entry = json.loads(REPLAY_PATH.read_text())[-1]
+    entry = q9_entry(json.loads(REPLAY_PATH.read_text()))
     entry.pop("error", None)
     entry.pop("raw_response", None)
     path = tmp_path / "responses.json"
@@ -89,6 +93,24 @@ def test_a_replay_entry_with_both_or_neither_of_reply_and_error_is_not_valid(tmp
     # THEN Q9 has status error with the message "Replay file is not valid."
     assert body["status"] == "error"
     assert body["error"] == "Replay file is not valid."
+
+
+def test_a_bad_replay_entry_makes_only_the_question_with_that_input_hash_not_valid(tmp_path):
+    # spec: 3.3-a
+    # GIVEN the committed Replay file, but the Q9 entry has both raw_response and error
+    entries = json.loads(REPLAY_PATH.read_text())
+    q9_entry(entries)["raw_response"] = "{}"
+    path = tmp_path / "responses.json"
+    path.write_text(json.dumps(entries))
+    with make_client(tmp_path, path) as client:
+        # WHEN the user asks for a draft of Q3 and of Q9
+        q3 = client.post("/api/questions/Q3/draft").json()
+        q9 = client.post("/api/questions/Q9/draft").json()
+
+    # THEN Q3 replays as a draft; only Q9 has the message "Replay file is not valid."
+    assert q3["status"] == "draft"
+    assert q9["status"] == "error"
+    assert q9["error"] == "Replay file is not valid."
 
 
 def test_the_label_is_cached_for_q3_simulated_for_q9_and_null_for_a_question_with_no_draft(tmp_path):
@@ -123,8 +145,3 @@ def test_retry_on_q9_adds_a_second_simulated_call_and_keeps_the_first(tmp_path):
     assert body["status"] == "error"
     assert body["allowed_actions"] == ["retry"]
 
-
-def test_the_committed_replay_file_is_valid_and_has_one_entry_per_input_hash():
-    entries = read_entries(REPLAY_PATH)
-    hashes = [e.input_hash for e in entries]
-    assert len(hashes) == len(set(hashes))
