@@ -1,6 +1,6 @@
-from typing import Literal
+from typing import Annotated, Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, StringConstraints
 
 
 # Rows of the seed tables (what the Store keeps).
@@ -67,7 +67,8 @@ class Seed(BaseModel):
 
 # Drafting.
 Verdict = Literal["supported", "not_documented", "conflict"]
-Status = Literal["new", "draft", "unresolved", "error"]
+Status = Literal["new", "draft", "unresolved", "approved", "error"]
+Action = Literal["generate", "retry", "edit", "approve", "leave_open", "ask_again"]
 Label = Literal["real", "cached", "simulated"]
 
 
@@ -150,6 +151,8 @@ class DraftRow(BaseModel):
     status: Literal["draft", "unresolved", "error"]
     verdict: Verdict | None
     model_answer: str | None
+    reviewer_answer: str | None = None
+    note: str | None = None
     citations: list[Citation]
     warnings: list[Warning]
     model_call_id: int | None
@@ -181,7 +184,13 @@ class QuestionView(BaseModel):
     replaced: list[ReplacedEvidence]
     label: Label | None
     error: str | None
-    allowed_actions: list[Literal["generate", "retry"]]
+    edited: bool
+    note: str | None
+    allowed_actions: list[Action]
+
+
+class EditRequest(BaseModel):
+    answer: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
 
 
 class ReplayEntry(BaseModel):

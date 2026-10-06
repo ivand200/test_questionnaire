@@ -3,7 +3,6 @@ import sqlite3
 from collections.abc import Iterator
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Literal, cast
 
 from qws.core import rules
 from qws.core.models import (
@@ -15,19 +14,9 @@ from qws.core.models import (
     QuestionRow,
     QuestionSummary,
     QuestionView,
-    Status,
 )
 
 SCHEMA_PATH = Path(__file__).resolve().parents[3] / "schema.sql"
-
-
-def _status(draft_status: str | None) -> Status:
-    """The one place that sets a question's status: the draft row status, else new."""
-    return cast(Status, draft_status or "new")
-
-
-def _allowed_actions(status: Status) -> list[Literal["generate", "retry"]]:
-    return {"new": ["generate"], "error": ["retry"]}.get(status, [])
 
 
 class Store:
@@ -93,7 +82,7 @@ class Store:
             ).fetchall()
         return [
             QuestionSummary(
-                id=r["id"], topic=r["topic"], text=r["text"], status=_status(r["draft_status"])
+                id=r["id"], topic=r["topic"], text=r["text"], status=rules.question_status(False, r["draft_status"])
             )
             for r in rows
         ]
@@ -104,7 +93,7 @@ class Store:
         if question is None:
             return None
         draft = self.get_draft(question_id)
-        status = _status(draft.status if draft else None)
+        status = rules.question_status(False, draft.status if draft else None)
         citations = draft.citations if draft else []
         # Computed on every read and never saved.
         replaced, superseded = rules.superseded_evidence(
@@ -115,14 +104,16 @@ class Store:
             topic=question.topic,
             text=question.text,
             status=status,
-            answer=draft.model_answer if draft else None,
+            answer=(draft.reviewer_answer or draft.model_answer) if draft else None,
             citations=citations,
             warnings=(draft.warnings if draft else []) + superseded,
             owner=self.get_owner(question.topic),
             replaced=replaced,
             label=draft.label if draft else None,
             error=draft.error if draft and status == "error" else None,
-            allowed_actions=_allowed_actions(status),
+            edited=bool(draft and draft.reviewer_answer),
+            note=draft.note if draft else None,
+            allowed_actions=rules.allowed_actions(status),
         )
 
     def get_owner(self, topic: str) -> str | None:
@@ -161,6 +152,14 @@ class Store:
         data["citations"] = json.loads(data["citations"])
         data["warnings"] = json.loads(data["warnings"])
         return DraftRow(**data)
+
+    def save_edit(self, question_id: str, answer: str) -> None:
+        """Set the reviewer answer of a draft. The model answer is never changed."""
+        with self._connect() as conn:
+            conn.execute(
+                "UPDATE draft SET reviewer_answer = ? WHERE question_id = ? AND status = 'draft'",
+                (answer, question_id),
+            )
 
     @staticmethod
     def _insert_call(conn: sqlite3.Connection, call: ModelCallRow) -> int:

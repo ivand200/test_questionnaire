@@ -2,8 +2,10 @@
 
 import hashlib
 import json
+from typing import cast
 
 from qws.core.models import (
+    Action,
     Checked,
     Citation,
     DocumentRow,
@@ -12,6 +14,7 @@ from qws.core.models import (
     QuestionRow,
     ReplacedEvidence,
     Reply,
+    Status,
     Warning,
 )
 
@@ -26,6 +29,26 @@ SYSTEM_PROMPT = (
     "Use verdict `conflict` when passages contradict each other. "
     "Cite only IDs that appear in the user message."
 )
+
+
+def question_status(has_approval: bool, draft_status: str | None) -> Status:
+    """The one place that sets a question's status: approved, else the draft row status, else new."""
+    if has_approval:
+        return "approved"
+    return cast(Status, draft_status or "new")
+
+
+_ALLOWED_ACTIONS: dict[Status, list[Action]] = {
+    "new": ["generate"],
+    "draft": ["edit", "approve", "leave_open"],
+    "unresolved": ["leave_open"],
+    "error": ["retry"],
+    "approved": ["ask_again"],
+}
+
+
+def allowed_actions(status: Status) -> list[Action]:
+    return list(_ALLOWED_ACTIONS[status])
 
 
 def normalize_text(text: str) -> str:

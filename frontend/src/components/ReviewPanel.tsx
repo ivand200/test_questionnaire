@@ -1,6 +1,13 @@
+import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { api } from "../api/client";
+
+// The Backend's refusal text (409 gives { detail: string }); a fallback for anything else.
+function refusal(error: unknown, fallback: string): string {
+  const detail = (error as { detail?: unknown } | undefined)?.detail;
+  return typeof detail === "string" ? detail : fallback;
+}
 
 export function ReviewPanel({ questionId }: { questionId: string }) {
   const queryClient = useQueryClient();
@@ -22,7 +29,7 @@ export function ReviewPanel({ questionId }: { questionId: string }) {
       const { data, error } = await api.POST("/api/questions/{question_id}/draft", {
         params: { path: { question_id: questionId } },
       });
-      if (error || !data) throw new Error("draft call failed");
+      if (error || !data) throw new Error(refusal(error, "Could not ask for a draft."));
       return data;
     },
     onSuccess: (data) => {
@@ -31,11 +38,31 @@ export function ReviewPanel({ questionId }: { questionId: string }) {
     },
   });
 
+  const [editing, setEditing] = useState(false);
+  const [editText, setEditText] = useState("");
+
+  const saveEdit = useMutation({
+    mutationFn: async (answer: string) => {
+      const { data, error } = await api.PUT("/api/questions/{question_id}/draft", {
+        params: { path: { question_id: questionId } },
+        body: { answer },
+      });
+      if (error || !data) throw new Error(refusal(error, "Could not save the edit."));
+      return data;
+    },
+    onSuccess: (data) => {
+      queryClient.setQueryData(queryKey, data);
+      void queryClient.invalidateQueries({ queryKey: ["questions"] });
+      setEditing(false);
+    },
+  });
+
   if (question.isError) return <section>Could not load the question.</section>;
   if (!question.data) return <section>Loading...</section>;
   const q = question.data;
   const buttonLabel = q.allowed_actions.includes("retry") ? "Retry" : "Generate draft";
-  const canAsk = q.allowed_actions.length > 0;
+  const canAsk = q.allowed_actions.includes("generate") || q.allowed_actions.includes("retry");
+  const canEdit = q.allowed_actions.includes("edit");
 
   return (
     <section>
@@ -49,11 +76,13 @@ export function ReviewPanel({ questionId }: { questionId: string }) {
           <p>{q.answer}</p>
         </>
       )}
+      {q.edited && <p>Edited by reviewer · not reused until approved</p>}
       {q.status === "unresolved" && (
         <p>Review route: {q.owner ?? "No owner mapped"}</p>
       )}
       {q.error && <p role="alert">{q.error}</p>}
-      {generate.isError && <p role="alert">Could not ask for a draft.</p>}
+      {generate.isError && <p role="alert">{generate.error.message}</p>}
+      {saveEdit.isError && <p role="alert">{saveEdit.error.message}</p>}
       {q.warnings.length > 0 && (
         <ul>
           {q.warnings.map((w) => (
@@ -88,6 +117,34 @@ export function ReviewPanel({ questionId }: { questionId: string }) {
             ))}
           </ul>
         </>
+      )}
+      {canEdit && !editing && (
+        <button
+          type="button"
+          onClick={() => {
+            setEditText(q.answer ?? "");
+            setEditing(true);
+          }}
+        >
+          Edit
+        </button>
+      )}
+      {canEdit && editing && (
+        <div>
+          <textarea
+            aria-label="Edited answer"
+            rows={4}
+            value={editText}
+            onChange={(e) => setEditText(e.target.value)}
+          />
+          <button
+            type="button"
+            disabled={saveEdit.isPending || editText.trim() === ""}
+            onClick={() => saveEdit.mutate(editText)}
+          >
+            Save edit
+          </button>
+        </div>
       )}
       {canAsk && (
         <button type="button" disabled={generate.isPending} onClick={() => generate.mutate()}>

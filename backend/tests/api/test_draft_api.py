@@ -415,13 +415,13 @@ def test_get_question_returns_the_draft_view_with_allowed_actions(tmp_path):
         # WHEN a client sends GET /api/questions/Q3
         response = client.get("/api/questions/Q3")
 
-    # THEN HTTP 200; the answer; one citation with its excerpt; no warnings; allowed_actions []
+    # THEN HTTP 200; the answer; one citation with its excerpt; no warnings; allowed_actions edit, approve, leave_open
     assert response.status_code == 200
     body = response.json()
     assert body["answer"] == "Monday to Friday, 09:00–17:00 UTC"
     assert body["citations"] == [{"passage_id": "SUPPORT-v1:p1", "excerpt": SUPPORT_EXCERPT}]
     assert body["warnings"] == []
-    assert body["allowed_actions"] == []
+    assert body["allowed_actions"] == ["edit", "approve", "leave_open"]
 
 
 def test_get_question_for_a_new_question_allows_generate(tmp_path):
@@ -557,12 +557,12 @@ def test_q2_not_documented_is_unresolved_with_the_product_reviewer_as_owner(tmp_
         # WHEN the client sends GET /api/questions/Q2
         body = client.get("/api/questions/Q2").json()
 
-    # THEN unresolved; owner Product reviewer; no citations; no warnings; no allowed actions
+    # THEN unresolved; owner Product reviewer; no citations; no warnings; allowed_actions leave_open
     assert body["status"] == "unresolved"
     assert body["owner"] == "Product reviewer"
     assert body["citations"] == []
     assert body["warnings"] == []
-    assert body["allowed_actions"] == []
+    assert body["allowed_actions"] == ["leave_open"]
 
 
 def test_the_owner_of_a_new_question_comes_from_its_topic(tmp_path):

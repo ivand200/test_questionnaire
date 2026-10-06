@@ -1,7 +1,13 @@
 import hashlib
 
 from qws.core.models import Citation, DocumentRow, PassageRow, QuestionRow
-from qws.core.rules import SYSTEM_PROMPT, build_prompt, question_hash, superseded_evidence
+from qws.core.rules import (
+    SYSTEM_PROMPT,
+    build_prompt,
+    question_hash,
+    question_status,
+    superseded_evidence,
+)
 
 
 def test_question_hash_is_sha256_of_topic_and_normalized_text():
@@ -82,3 +88,10 @@ def test_superseded_evidence_ignores_a_cited_document_that_replaces_nothing():
     replaced, warnings = cited_b
     assert [(r.passage_id, r.replaced_by) for r in replaced] == [("A:p1", "B")]
     assert [w.kind for w in warnings] == ["superseded"]
+
+
+def test_status_is_approved_over_the_draft_status_else_draft_else_new():
+    # spec: 4.1-a, 4.5-a
+    assert question_status(True, "draft") == "approved"
+    assert question_status(False, "unresolved") == "unresolved"
+    assert question_status(False, None) == "new"

@@ -80,7 +80,8 @@ export interface paths {
             cookie?: never;
         };
         get?: never;
-        put?: never;
+        /** Edit Draft */
+        put: operations["edit_draft_api_questions__question_id__draft_put"];
         /** Draft */
         post: operations["draft_api_questions__question_id__draft_post"];
         delete?: never;
@@ -117,6 +118,11 @@ export interface components {
             /** Excerpt */
             excerpt: string;
         };
+        /** EditRequest */
+        EditRequest: {
+            /** Answer */
+            answer: string;
+        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
@@ -146,7 +152,7 @@ export interface components {
              * Status
              * @enum {string}
              */
-            status: "new" | "draft" | "unresolved" | "error";
+            status: "new" | "draft" | "unresolved" | "approved" | "error";
         };
         /** QuestionView */
         QuestionView: {
@@ -160,7 +166,7 @@ export interface components {
              * Status
              * @enum {string}
              */
-            status: "new" | "draft" | "unresolved" | "error";
+            status: "new" | "draft" | "unresolved" | "approved" | "error";
             /** Answer */
             answer: string | null;
             /** Citations */
@@ -175,8 +181,12 @@ export interface components {
             label: ("real" | "cached" | "simulated") | null;
             /** Error */
             error: string | null;
+            /** Edited */
+            edited: boolean;
+            /** Note */
+            note: string | null;
             /** Allowed Actions */
-            allowed_actions: ("generate" | "retry")[];
+            allowed_actions: ("generate" | "retry" | "edit" | "approve" | "leave_open" | "ask_again")[];
         };
         /**
          * ReplacedEvidence
@@ -301,6 +311,41 @@ export interface operations {
             cookie?: never;
         };
         requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["QuestionView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    edit_draft_api_questions__question_id__draft_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                question_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EditRequest"];
+            };
+        };
         responses: {
             /** @description Successful Response */
             200: {

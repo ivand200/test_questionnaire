@@ -16,7 +16,7 @@ from qws.config import (
     drafter_config,
     open_store,
 )
-from qws.core.models import LoadIssue, QuestionSummary, QuestionView, RunAllResult
+from qws.core.models import EditRequest, LoadIssue, QuestionSummary, QuestionView, RunAllResult
 from qws.services.draft_service import (
     Conflict,
     DraftService,
@@ -24,6 +24,7 @@ from qws.services.draft_service import (
     DrafterConfig,
     UnknownQuestion,
 )
+from qws.services.review_service import NotAllowed, ReviewService
 
 DIST_DIR = REPO_DIR / "frontend" / "dist"
 
@@ -58,6 +59,7 @@ def create_app(
         app.state.service = DraftService(
             store, drafter or drafter_from_env(config, replay_path), config
         )
+        app.state.review = ReviewService(store)
         yield
 
     app = FastAPI(lifespan=lifespan)
@@ -88,6 +90,15 @@ def create_app(
             raise HTTPException(404, f"Unknown question {question_id}.")
         if isinstance(result, Conflict):
             raise HTTPException(409, f"Question {question_id} already has a draft.")
+        return result
+
+    @app.put("/api/questions/{question_id}/draft")
+    def edit_draft(question_id: str, body: EditRequest, request: Request) -> QuestionView:
+        result = request.app.state.review.edit(question_id, body.answer)
+        if isinstance(result, UnknownQuestion):
+            raise HTTPException(404, f"Unknown question {question_id}.")
+        if isinstance(result, NotAllowed):
+            raise HTTPException(409, result.reason)
         return result
 
     @app.post("/api/questionnaire/run")
