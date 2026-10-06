@@ -258,7 +258,7 @@ class LeaveOpenRequest(BaseModel):
 class ReplayEntry(BaseModel):
     """One saved reply in replay/responses.json, found by input hash.
 
-    Exactly one of raw_response and error should be set; an error entry is a Simulated entry.
+    Exactly one of raw_response and error should be set; the label says whether it is simulated.
     ReplayDrafter checks this for the entry of the input hash it looks up.
     """
 
@@ -269,7 +269,3 @@ class ReplayEntry(BaseModel):
     raw_response: str | None = None
     error: str | None = None
     recorded_at: str
-
-    @property
-    def is_simulated(self) -> bool:
-        return self.error is not None

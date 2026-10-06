@@ -1,3 +1,4 @@
+import json
 import sqlite3
 from pathlib import Path
 
@@ -6,6 +7,7 @@ from qws.adapters.replay_drafter import ReplayDrafter
 from qws.adapters.replay_file import read_entries
 from qws.config import REPLAY_PATH, drafter_config, open_store
 from qws.core import rules
+from qws.core.models import Prompt
 
 SUPPORT_EXCERPT = (
     "Email support is available Monday to Friday, 09:00 to 17:00 UTC. Live chat is not offered."
@@ -138,3 +140,45 @@ def test_run_all_in_replay_mode_with_no_key_shows_every_demo_case(tmp_path):
     assert found["Q9"]["status"] == "error"
     assert found["Q9"]["label"] == "simulated"
     assert "error" not in {found[f"Q{n}"]["status"] for n in range(3, 9)}
+
+
+def replay_entry(label: str, raw_response: str | None, error: str | None) -> dict:
+    return {
+        "input_hash": "h1", "label": label, "model": "m1", "settings": {"temperature": 0},
+        "raw_response": raw_response, "error": error, "recorded_at": "2026-10-07T00:00:00+00:00",
+    }
+
+
+def lookup(tmp_path: Path, entry: dict):
+    path = tmp_path / "responses.json"
+    path.write_text(json.dumps([{k: v for k, v in entry.items() if v is not None}]))
+    prompt = Prompt(
+        system="s", user="u", model="m1", settings={"temperature": 0}, passage_ids=[],
+        input_hash="h1",
+    )
+    return ReplayDrafter("m1", {"temperature": 0}, path).draft(prompt)
+
+
+def test_a_simulated_entry_with_a_raw_response_gives_a_simulated_reply(tmp_path):
+    # spec: 3.3-a
+    # GIVEN a Replay file entry with label simulated, a raw response and no error
+    entry = replay_entry("simulated", '{"answer": "Yes."}', None)
+
+    # WHEN the ReplayDrafter looks up its input hash
+    reply = lookup(tmp_path, entry)
+
+    # THEN the reply has label simulated, that raw reply and no error
+    assert (reply.label, reply.raw_reply, reply.error) == ("simulated", '{"answer": "Yes."}', None)
+
+
+def test_a_simulated_entry_with_a_raw_response_and_an_error_is_not_valid(tmp_path):
+    # spec: 3.3-b
+    # GIVEN a Replay file entry with label simulated, a raw response and an error
+    entry = replay_entry("simulated", '{"answer": "Yes."}', "Model call failed: timeout.")
+
+    # WHEN the ReplayDrafter looks up its input hash
+    reply = lookup(tmp_path, entry)
+
+    # THEN the reply has the error "Replay file is not valid."
+    assert reply.error == "Replay file is not valid."
+    assert reply.raw_reply is None
