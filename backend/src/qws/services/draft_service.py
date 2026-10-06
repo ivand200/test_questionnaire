@@ -108,8 +108,8 @@ class DraftService:
     def run_all(self) -> list[str]:
         """Ask every question with status new or error, one after the other in Seed order.
 
-        Returns the IDs that were asked. A question that has a draft, is unresolved, or is being
-        asked right now is skipped. `ask` never raises, so one failure does not stop the loop.
+        Returns the IDs that were asked. A question that has a draft, is unresolved, is approved, or
+        is being asked right now is skipped. `ask` never raises, so one failure does not stop the loop.
         """
         asked: list[str] = []
         for summary in self._store.list_questions():
@@ -120,6 +120,11 @@ class DraftService:
         return asked
 
     def _ask(self, question: QuestionRow) -> QuestionView | Conflict:
+        if self._store.get_approval(question.question_hash) is not None:
+            # Reuse: the approved answer wins; no model call.
+            view = self._store.get_question_view(question.id)
+            assert view is not None
+            return view
         existing = self._store.get_draft(question.id)
         if existing is not None and existing.status in ("draft", "unresolved"):
             return Conflict()

@@ -134,16 +134,18 @@ def test_an_edit_without_approval_stays_a_draft_when_asked_again_or_run_all(tmp_
 
 def test_allowed_actions_follow_the_status(tmp_path):
     # spec: 4.5-a
-    # GIVEN Q1 draft, Q2 unresolved, Q9 error (replay file) and Q3 new
+    # GIVEN Q1 draft, Q2 unresolved, Q9 error (replay file), Q4 approved and Q3 new
     with make_client(tmp_path) as client:
         client.post("/api/questions/Q1/draft")
         client.post("/api/questions/Q2/draft")
         client.post("/api/questions/Q9/draft")
+        client.post("/api/questions/Q4/draft")
+        client.post("/api/questions/Q4/approve", json={"approver": "Anna"})
 
         # WHEN the client sends GET /api/questions/{id} for each
         actions = {
             i: client.get(f"/api/questions/{i}").json()["allowed_actions"]
-            for i in ("Q3", "Q1", "Q2", "Q9")
+            for i in ("Q3", "Q1", "Q2", "Q9", "Q4")
         }
 
     # THEN the allowed actions follow the status
@@ -152,4 +154,5 @@ def test_allowed_actions_follow_the_status(tmp_path):
         "Q1": ["edit", "approve", "leave_open"],
         "Q2": ["leave_open"],
         "Q9": ["retry"],
+        "Q4": ["ask_again"],
     }

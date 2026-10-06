@@ -81,6 +81,7 @@ export function ReviewPanel({ questionId }: { questionId: string }) {
   const canAsk = q.allowed_actions.includes("generate") || q.allowed_actions.includes("retry");
   const canApprove = q.allowed_actions.includes("approve");
   const canEdit = q.allowed_actions.includes("edit");
+  const canAskAgain = q.allowed_actions.includes("ask_again");
 
   return (
     <section>
@@ -180,6 +181,11 @@ export function ReviewPanel({ questionId }: { questionId: string }) {
       {canAsk && (
         <button type="button" disabled={generate.isPending} onClick={() => generate.mutate()}>
           {buttonLabel}
+        </button>
+      )}
+      {canAskAgain && (
+        <button type="button" disabled={generate.isPending} onClick={() => generate.mutate()}>
+          Ask this question again
         </button>
       )}
     </section>
