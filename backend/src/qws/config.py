@@ -30,12 +30,12 @@ def drafter_config() -> DrafterConfig:
 def open_store(
     db_path: Path | str | None = None,
     seed_path: Path = SEED_PATH,
-    demo_path: Path | None = None,
+    demo_path: Path | None = DEMO_PATH,
 ) -> tuple[Store, list[LoadIssue]]:
     """Open the Database, create its tables and load the seed. Shared by the API and the recorder.
 
     The questions of the Demo file are added to the seed in memory, after the Seed questions;
-    the Seed file is never changed.
+    the Seed file is never changed. Pass `demo_path=None` to load the seed alone.
     """
     store = Store(db_path or os.environ.get("DB_PATH") or DEFAULT_DB_PATH)
     store.init_schema()

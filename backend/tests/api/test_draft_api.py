@@ -50,7 +50,7 @@ def failed(error: str) -> DrafterReply:
 def make_client(tmp_path: Path, drafter=None, seed: dict | None = None) -> TestClient:
     seed_path = tmp_path / "seed.json"
     seed_path.write_text(json.dumps(seed or REAL_SEED))
-    return TestClient(create_app(tmp_path / "dist", tmp_path / "test.db", seed_path, drafter))
+    return TestClient(create_app(tmp_path / "dist", tmp_path / "test.db", seed_path, drafter, demo_path=None))
 
 
 def db_rows(tmp_path: Path, table: str) -> list[dict]:

@@ -1,25 +1,14 @@
 import json
-import sqlite3
-from pathlib import Path
 
-import pytest
 from fastapi.testclient import TestClient
 
-from qws.api.main import create_app
-from qws.config import DEMO_PATH, SEED_PATH
+from conftest import ALL, call_count, make_client
 from qws.core.models import DrafterReply, Prompt
 
 TIMEOUT = "Model call failed: timeout."
-ALL = [f"Q{n}" for n in range(1, 10)]
 Q2_TEXT = "Is JSON export available?"
 Q4_TEXT = "Is live chat offered?"
 Q9_TEXT = "What is the response time for priority support tickets?"
-
-
-@pytest.fixture(autouse=True)
-def no_model_env(monkeypatch):
-    for name in ("MODEL_MODE", "MODEL_NAME", "OPENAI_API_KEY"):
-        monkeypatch.delenv(name, raising=False)
 
 
 class ScriptedDrafter:
@@ -46,22 +35,6 @@ class ScriptedDrafter:
         return DrafterReply(raw_reply=json.dumps(raw), **base)
 
 
-def make_client(tmp_path: Path, drafter: ScriptedDrafter) -> TestClient:
-    return TestClient(
-        create_app(tmp_path / "dist", tmp_path / "test.db", SEED_PATH, drafter, demo_path=DEMO_PATH)
-    )
-
-
-def call_count(tmp_path: Path, question_id: str) -> int:
-    conn = sqlite3.connect(tmp_path / "test.db")
-    try:
-        return conn.execute(
-            "SELECT COUNT(*) FROM model_call WHERE question_id = ?", (question_id,)
-        ).fetchone()[0]
-    finally:
-        conn.close()
-
-
 def statuses(client: TestClient) -> dict[str, str]:
     return {q["id"]: q["status"] for q in client.get("/api/questions").json()}
 
@@ -70,7 +43,7 @@ def test_run_all_asks_every_new_question_and_lists_them_in_seed_order(tmp_path):
     # spec: 4.1-a
     # GIVEN all 9 questions are new
     drafter = ScriptedDrafter(unresolved=[Q2_TEXT], failing=[Q9_TEXT])
-    with make_client(tmp_path, drafter) as client:
+    with make_client(tmp_path, drafter=drafter) as client:
         # WHEN the client sends POST /api/questionnaire/run
         response = client.post("/api/questionnaire/run")
 
@@ -89,7 +62,7 @@ def test_a_second_run_asks_only_the_question_that_is_still_an_error(tmp_path):
     # spec: 4.1-b
     # GIVEN a run is done and Q9 is still error
     drafter = ScriptedDrafter(unresolved=[Q2_TEXT], failing=[Q9_TEXT])
-    with make_client(tmp_path, drafter) as client:
+    with make_client(tmp_path, drafter=drafter) as client:
         client.post("/api/questionnaire/run")
 
         # WHEN the client sends POST /api/questionnaire/run again
@@ -105,7 +78,7 @@ def test_run_all_skips_questions_with_a_draft_or_unresolved(tmp_path):
     # spec: 4.2-a
     # GIVEN Q3 has a draft and Q2 is unresolved; Q9 is error; the others are new
     drafter = ScriptedDrafter(unresolved=[Q2_TEXT], failing=[Q9_TEXT])
-    with make_client(tmp_path, drafter) as client:
+    with make_client(tmp_path, drafter=drafter) as client:
         client.post("/api/questions/Q3/draft")
         client.post("/api/questions/Q2/draft")
         client.post("/api/questions/Q9/draft")
@@ -129,7 +102,7 @@ def test_a_timeout_for_q4_does_not_stop_the_other_questions(tmp_path):
     # spec: 4.3-a
     # GIVEN a Drafter that replies for every question except Q4, which times out; all 9 are new
     drafter = ScriptedDrafter(failing=[Q4_TEXT])
-    with make_client(tmp_path, drafter) as client:
+    with make_client(tmp_path, drafter=drafter) as client:
         # WHEN the client sends POST /api/questionnaire/run
         response = client.post("/api/questionnaire/run")
 

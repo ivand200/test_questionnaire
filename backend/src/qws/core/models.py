@@ -198,3 +198,7 @@ class ReplayEntry(BaseModel):
     raw_response: str | None = None
     error: str | None = None
     recorded_at: str
+
+    @property
+    def is_simulated(self) -> bool:
+        return self.error is not None

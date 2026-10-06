@@ -7,7 +7,7 @@ from pydantic_ai.models.function import FunctionModel
 from qws.adapters.real_drafter import RealDrafter
 from qws.adapters.simulated_drafter import SimulatedDrafter
 from qws.adapters.store import Store
-from qws.config import DEMO_PATH, MODEL_SETTINGS, SEED_PATH
+from qws.config import MODEL_SETTINGS, SEED_PATH, open_store
 from qws.services import seed_loader
 from qws.services.draft_service import DrafterConfig
 from qws.services.recorder import RECORDING_LIST, Recorder
@@ -83,11 +83,7 @@ def test_a_failed_call_adds_no_entry_and_is_reported(tmp_path):
 def test_the_recorder_writes_a_simulated_entry_for_q9_and_never_asks_the_real_model(tmp_path):
     # spec: 5.2-a
     # GIVEN the Seed and the Demo file; no model is built, so none can be asked
-    seed = json.loads(SEED_PATH.read_text())
-    seed["questions"] += json.loads(DEMO_PATH.read_text())["questions"]
-    store = Store(tmp_path / "test.db")
-    store.init_schema()
-    seed_loader.load(seed, store)
+    store, _ = open_store(tmp_path / "test.db")
     recorder = Recorder(store, DrafterConfig("m1", MODEL_SETTINGS))
     path = tmp_path / "responses.json"
 

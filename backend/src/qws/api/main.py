@@ -48,7 +48,7 @@ def create_app(
     seed_path: Path = SEED_PATH,
     drafter: Drafter | None = None,
     replay_path: Path = REPLAY_PATH,
-    demo_path: Path | None = None,
+    demo_path: Path | None = DEMO_PATH,
 ) -> FastAPI:
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
@@ -102,4 +102,4 @@ def create_app(
     return app
 
 
-app = create_app(demo_path=DEMO_PATH)
+app = create_app()

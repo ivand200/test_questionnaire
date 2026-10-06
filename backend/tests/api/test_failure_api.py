@@ -1,47 +1,16 @@
 import json
-import sqlite3
-from pathlib import Path
 
 import pytest
-from fastapi.testclient import TestClient
 
-from qws.api.main import create_app
-from qws.config import DEMO_PATH, REPLAY_PATH, SEED_PATH
+from conftest import ALL, make_client, model_calls
+from qws.config import REPLAY_PATH
 
 TIMEOUT = "Model call failed: timeout."
-
-
-@pytest.fixture(autouse=True)
-def no_model_env(monkeypatch):
-    for name in ("MODEL_MODE", "MODEL_NAME", "OPENAI_API_KEY"):
-        monkeypatch.delenv(name, raising=False)
-
-
-def make_client(tmp_path: Path, replay_path: Path = REPLAY_PATH) -> TestClient:
-    # The real Seed, the Demo file and the committed Replay file, as `make dev` runs them.
-    return TestClient(
-        create_app(
-            tmp_path / "dist", tmp_path / "test.db", SEED_PATH, replay_path=replay_path,
-            demo_path=DEMO_PATH,
-        )
-    )
 
 
 def q9_entry(entries: list[dict]) -> dict:
     [entry] = [e for e in entries if e.get("label") == "simulated"]
     return entry
-
-
-def model_calls(tmp_path: Path, question_id: str) -> list[tuple]:
-    conn = sqlite3.connect(tmp_path / "test.db")
-    try:
-        return conn.execute(
-            "SELECT label, raw_response, error, input_tokens, output_tokens, id FROM model_call"
-            " WHERE question_id = ? ORDER BY id",
-            (question_id,),
-        ).fetchall()
-    finally:
-        conn.close()
 
 
 def test_the_demo_question_q9_is_listed_last_and_there_are_no_load_issues(tmp_path):
@@ -53,7 +22,7 @@ def test_the_demo_question_q9_is_listed_last_and_there_are_no_load_issues(tmp_pa
         issues = client.get("/api/load-issues").json()
 
     # THEN 9 items Q1 to Q9 in this order; Q9 has topic support and status new; no load issues
-    assert [q["id"] for q in body] == [f"Q{n}" for n in range(1, 10)]
+    assert [q["id"] for q in body] == ALL
     assert body[8]["topic"] == "support"
     assert body[8]["status"] == "new"
     assert issues == []

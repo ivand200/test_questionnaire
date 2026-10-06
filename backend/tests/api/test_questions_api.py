@@ -12,7 +12,7 @@ REAL_SEED = json.loads(SEED_PATH.read_text())
 def make_client(tmp_path: Path, seed: dict | None = None) -> TestClient:
     seed_path = tmp_path / "seed.json"
     seed_path.write_text(json.dumps(seed or REAL_SEED))
-    return TestClient(create_app(tmp_path / "dist", tmp_path / "test.db", seed_path))
+    return TestClient(create_app(tmp_path / "dist", tmp_path / "test.db", seed_path, demo_path=None))
 
 
 def test_load_issues_is_empty_for_the_real_seed(tmp_path):

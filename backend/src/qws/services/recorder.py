@@ -8,7 +8,7 @@ from qws.adapters.real_drafter import RealDrafter
 from qws.adapters.replay_file import add_entry
 from qws.adapters.simulated_drafter import SimulatedDrafter
 from qws.adapters.store import Store
-from qws.config import DEMO_PATH, REPLAY_PATH, drafter_config, open_store
+from qws.config import REPLAY_PATH, drafter_config, open_store
 from qws.core.models import ReplayEntry
 from qws.services.draft_service import Drafter, DrafterConfig, attempt
 
@@ -31,7 +31,7 @@ class Recorder:
                 continue
             call = attempt(self._store, drafter, self._config, question).call
             self._store.save_model_call(call)
-            if call.label == "simulated" and call.error is not None:
+            if call.label == "simulated":
                 add_entry(
                     path,
                     ReplayEntry(
@@ -62,7 +62,7 @@ class Recorder:
 
 
 def main() -> int:
-    store, _ = open_store(demo_path=DEMO_PATH)
+    store, _ = open_store()
     config = drafter_config()
     recorder = Recorder(store, config)
     simulated = SimulatedDrafter(config.model, config.settings)
