@@ -23,9 +23,17 @@ def no_model_env(monkeypatch):
         monkeypatch.delenv(name, raising=False)
 
 
-def make_client(tmp_path: Path) -> TestClient:
+def make_client(tmp_path: Path, replay_path: Path = REPLAY_PATH) -> TestClient:
     # The committed Replay file and the default configuration, as `make dev` runs them.
-    return TestClient(create_app(tmp_path / "dist", tmp_path / "test.db", SEED_PATH))
+    return TestClient(
+        create_app(tmp_path / "dist", tmp_path / "test.db", SEED_PATH, replay_path=replay_path)
+    )
+
+
+def empty_replay_file(tmp_path: Path) -> Path:
+    path = tmp_path / "empty-responses.json"
+    path.write_text("[]")
+    return path
 
 
 def test_replay_gives_the_q3_draft_from_the_committed_file_with_no_key(tmp_path):
@@ -49,9 +57,9 @@ def test_replay_gives_the_q3_draft_from_the_committed_file_with_no_key(tmp_path)
 
 def test_replay_with_no_entry_gives_error_and_no_exception(tmp_path, monkeypatch):
     # spec: 4.2-a
-    # GIVEN MODEL_MODE is replay; the Replay file has no entry for Q4
+    # GIVEN MODEL_MODE is replay; the Replay file is empty, so it has no entry for Q4
     monkeypatch.setenv("MODEL_MODE", "replay")
-    with make_client(tmp_path) as client:
+    with make_client(tmp_path, empty_replay_file(tmp_path)) as client:
         # WHEN the user asks for a draft of Q4
         response = client.post("/api/questions/Q4/draft")
 
@@ -66,7 +74,7 @@ def test_replay_with_no_entry_gives_error_and_no_exception(tmp_path, monkeypatch
 def test_after_a_replay_error_the_other_questions_keep_their_status(tmp_path):
     # spec: 4.2-b
     # GIVEN as 4.2-a
-    with make_client(tmp_path) as client:
+    with make_client(tmp_path, empty_replay_file(tmp_path)) as client:
         # WHEN the same request is made
         client.post("/api/questions/Q4/draft")
         statuses = {q["id"]: q["status"] for q in client.get("/api/questions").json()}
