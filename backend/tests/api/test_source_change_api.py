@@ -277,3 +277,75 @@ def test_a_blank_approver_leaves_a_needs_review_answer_as_it_was(tmp_path):
     assert rows == row_before
     assert rows[0]["approver"] == "Anna"
     assert json.loads(rows[0]["source_versions"]) == {"EXPORT-v2": 2}
+
+
+def test_an_edit_on_a_needs_review_answer_is_saved_but_not_reused(tmp_path):
+    # spec: 3.3-a
+    # GIVEN Q1 is needs_review (approved by Anna on v2, EXPORT-v2 is now v3)
+    new_answer = "No. CSV export needs a paid plan, as of version 3."
+    with make_client(tmp_path) as client:
+        approved_q1(client)
+        bump(client)
+        row_before = approved_rows(tmp_path)
+
+        # WHEN the client edits Q1, asks again, then sends GET Q1
+        edit = client.put("/api/questions/Q1/draft", json={"answer": new_answer})
+        ask = client.post("/api/questions/Q1/draft")
+        view = client.get("/api/questions/Q1")
+
+    # THEN 200 needs_review with the edit; ask again 409; the view is the same; the row is
+    # unchanged; no new model call
+    assert edit.status_code == 200
+    body = edit.json()
+    assert body["status"] == "needs_review"
+    assert body["answer"] == new_answer
+    assert body["edited"] is True
+    assert ask.status_code == 409
+    assert view.json() == body
+    assert approved_rows(tmp_path) == row_before
+    assert approved_rows(tmp_path)[0]["approver"] == "Anna"
+    assert call_count(tmp_path, "Q1") == 1
+
+
+def test_a_blank_edit_on_a_needs_review_answer_gives_422_and_changes_nothing(tmp_path):
+    # spec: 3.3-b
+    # GIVEN Q1 is needs_review
+    with make_client(tmp_path) as client:
+        approved_q1(client)
+        bump(client)
+
+        # WHEN the client edits Q1 with a blank answer
+        response = client.put("/api/questions/Q1/draft", json={"answer": "   "})
+        view = client.get("/api/questions/Q1").json()
+
+    # THEN 422; the answer is the old approved answer; edited is false
+    assert response.status_code == 422
+    assert view["status"] == "needs_review"
+    assert view["answer"] == EDIT
+    assert view["edited"] is False
+
+
+def test_leave_open_on_a_needs_review_answer_keeps_the_status_and_saves_the_note(tmp_path):
+    # spec: 3.4-a
+    # GIVEN Q1 is needs_review
+    note = "Check the new export policy."
+    with make_client(tmp_path) as client:
+        approved_q1(client)
+        bump(client)
+        row_before = approved_rows(tmp_path)
+
+        # WHEN the client leaves Q1 open with a note, then the app is started again and GET Q1
+        response = client.post("/api/questions/Q1/leave-open", json={"note": note})
+    with make_client(tmp_path) as client:
+        view = client.get("/api/questions/Q1").json()
+
+    # THEN 200 needs_review with the note; after the restart the same; the draft stays a draft;
+    # same actions; the row is unchanged
+    assert response.status_code == 200
+    body = response.json()
+    assert body["status"] == "needs_review"
+    assert body["note"] == note
+    assert body["allowed_actions"] == ["edit", "approve", "leave_open"]
+    assert view == body
+    assert draft_row(tmp_path, "Q1")["status"] == "draft"
+    assert approved_rows(tmp_path) == row_before

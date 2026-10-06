@@ -210,13 +210,17 @@ class Store:
                 (answer, question_id),
             )
 
-    def save_note(self, question_id: str, note: str) -> None:
-        """Set the note and make the draft `unresolved`. The edit and the model answer are kept."""
+    def save_note(self, question_id: str, note: str, keep_status: bool = False) -> None:
+        """Set the note. The draft becomes `unresolved` unless `keep_status` (a needs_review answer).
+
+        The edit and the model answer are kept.
+        """
         with self._connect() as conn:
             conn.execute(
-                "UPDATE draft SET note = ?, status = 'unresolved'"
-                " WHERE question_id = ? AND status IN ('draft', 'unresolved')",
-                (note, question_id),
+                "UPDATE draft SET note = :note,"
+                " status = CASE WHEN :keep THEN status ELSE 'unresolved' END"
+                " WHERE question_id = :id AND status IN ('draft', 'unresolved')",
+                {"note": note, "keep": keep_status, "id": question_id},
             )
 
     def get_approval(self, question_hash: str) -> ApprovedRow | None:

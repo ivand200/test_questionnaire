@@ -72,14 +72,14 @@ class ReviewService:
     def leave_open(
         self, question_id: str, note: str
     ) -> QuestionView | NotAllowed | UnknownQuestion:
-        """Save a note; a draft becomes unresolved, an unresolved question keeps its status."""
+        """Save a note; a draft becomes unresolved, an unresolved or needs_review question keeps its status."""
         view = self._store.get_question_view(question_id)
         if view is None:
             return UnknownQuestion()
         refused = self._refuse_unless_allowed(view, "leave_open")
         if refused:
             return refused
-        self._store.save_note(question_id, note)
+        self._store.save_note(question_id, note, keep_status=view.status == "needs_review")
         updated = self._store.get_question_view(question_id)
         assert updated is not None
         return updated
