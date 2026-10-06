@@ -1,15 +1,16 @@
 import threading
 from dataclasses import dataclass
 from datetime import UTC, datetime
-from typing import Protocol
+from typing import TypeVar
 
-from pydantic import ValidationError
+from pydantic import BaseModel, ValidationError
 
 from qws.adapters.store import Store
 from qws.core import rules
 from qws.core.models import (
     Checked,
     DraftRow,
+    Drafter,
     DrafterReply,
     ModelCallRow,
     PassageRow,
@@ -24,13 +25,7 @@ from qws.core.models import (
 
 INVALID_REPLY = "Model reply was not valid."
 
-
-class Drafter(Protocol):
-    """Asks a model for an answer. Never raises: a failure comes back in `error`."""
-
-    def draft(self, prompt: Prompt) -> DrafterReply: ...
-
-    def judge(self, prompt: Prompt) -> DrafterReply: ...
+T = TypeVar("T", bound=BaseModel)
 
 
 @dataclass(frozen=True)
@@ -73,6 +68,16 @@ def _model_call(question: QuestionRow, prompt: Prompt, drafted: DrafterReply, er
     )
 
 
+def _validated(model_type: type[T], drafted: DrafterReply) -> tuple[T | None, str | None]:
+    """The reply parsed as `model_type`, and the error text when there is no valid reply."""
+    if drafted.error is not None:
+        return None, drafted.error
+    try:
+        return model_type.model_validate_json(drafted.raw_reply or ""), None
+    except ValidationError:
+        return None, INVALID_REPLY
+
+
 def attempt(
     store: Store, drafter: Drafter, config: DrafterConfig, question: QuestionRow
 ) -> Attempt:
@@ -81,13 +86,7 @@ def attempt(
     prompt = rules.build_prompt(question, passages, config.model, config.settings)
     drafted = drafter.draft(prompt)
 
-    error = drafted.error
-    reply = None
-    if error is None:
-        try:
-            reply = Reply.model_validate_json(drafted.raw_reply or "")
-        except ValidationError:
-            error = INVALID_REPLY
+    reply, error = _validated(Reply, drafted)
     return Attempt(call=_model_call(question, prompt, drafted, error), reply=reply, passages=passages)
 
 
@@ -98,7 +97,7 @@ class Asked:
     call: ModelCallRow
     checked: Checked | None
     judge_call: ModelCallRow | None
-    support: SupportReply | None  # the valid Support reply; None when there is no judge call or it failed
+    support_warning: Warning | None  # from the judge call; None when it did not run or said `supports`
 
 
 def ask_model(
@@ -114,14 +113,13 @@ def ask_model(
         question.text, checked.answer, checked.citations, config.model, config.settings
     )
     judged = drafter.judge(prompt)
-    error = judged.error
-    support = None
-    if error is None:
-        try:
-            support = SupportReply.model_validate_json(judged.raw_reply or "")
-        except ValidationError:
-            error = INVALID_REPLY
-    return Asked(made.call, checked, _model_call(question, prompt, judged, error), support)
+    support, error = _validated(SupportReply, judged)
+    return Asked(
+        made.call,
+        checked,
+        _model_call(question, prompt, judged, error),
+        rules.support_warning(support, error),
+    )
 
 
 def _draft_warnings(asked: Asked) -> list[Warning]:
@@ -129,10 +127,8 @@ def _draft_warnings(asked: Asked) -> list[Warning]:
     if asked.checked is None:
         return []
     warnings = list(asked.checked.warnings)
-    if asked.judge_call is not None:
-        extra = rules.support_warning(asked.support, asked.judge_call.error)
-        if extra is not None:
-            warnings.append(extra)
+    if asked.support_warning is not None:
+        warnings.append(asked.support_warning)
     return warnings
 
 

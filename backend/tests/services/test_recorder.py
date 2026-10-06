@@ -177,6 +177,23 @@ def test_the_recorder_writes_q9_q10_and_the_q10_judge_entry_and_asks_no_draft_pr
     assert prompts == [SUPPORT_SYSTEM_PROMPT]
 
 
+def test_a_failed_simulated_judge_is_reported_and_gets_no_entry(tmp_path):
+    # spec: 3.4
+    # GIVEN the SimulatedDrafter with no judge Drafter, so its judge call fails with the timeout
+    store, _ = open_store(tmp_path / "test.db")
+    recorder = Recorder(store, DrafterConfig("m1", MODEL_SETTINGS))
+    path = tmp_path / "responses.json"
+
+    # WHEN the Recorder records Q10
+    failures = recorder.record(["Q10"], SimulatedDrafter("m1", MODEL_SETTINGS), path)
+
+    # THEN the judge failure is reported and the file has only the simulated draft entry
+    assert failures == ["Q10: judge: Model call failed: timeout."]
+    [entry] = json.loads(path.read_text())
+    assert entry["label"] == "simulated"
+    assert entry["raw_response"] == LYING_DRAFT
+
+
 def test_the_recording_list_is_q1_to_q8_and_a_second_run_keeps_one_entry_per_hash(tmp_path):
     # spec: 5.1-a
     # GIVEN a fake model that replies for each question; an empty Replay file

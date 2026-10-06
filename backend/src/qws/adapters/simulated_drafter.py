@@ -1,7 +1,6 @@
 import json
 
-from qws.core.models import DrafterReply, Prompt
-from qws.services.draft_service import Drafter
+from qws.core.models import Drafter, DrafterReply, Prompt
 
 TIMEOUT_ERROR = "Model call failed: timeout."
 LYING_QUESTION = "Does the free plan include CSV export?"  # Q10 in the Demo file
@@ -34,7 +33,7 @@ class SimulatedDrafter:
         return DrafterReply(label="simulated", model=self._model, settings=self._settings, **fields)
 
     def draft(self, prompt: Prompt) -> DrafterReply:
-        if prompt.user.startswith(f"Question: {LYING_QUESTION}\n"):
+        if LYING_QUESTION in prompt.user:
             return self._reply(raw_reply=LYING_DRAFT)
         return self._reply(error=TIMEOUT_ERROR)
 

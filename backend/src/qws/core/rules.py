@@ -164,6 +164,12 @@ def current_passages(
     return [p for p in passages if p.document_id in current_ids]
 
 
+def _sha256_json(payload: dict) -> str:
+    """The hash recipe of every prompt: canonical JSON (sorted keys, no spaces), then sha256."""
+    canonical = json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+    return hashlib.sha256(canonical.encode()).hexdigest()
+
+
 def input_hash(
     model: str,
     settings: dict[str, int | float | str],
@@ -171,19 +177,15 @@ def input_hash(
     question_text: str,
     passages: list[PassageRow],
 ) -> str:
-    canonical = json.dumps(
+    return _sha256_json(
         {
             "model": model,
             "settings": settings,
             "system": system,
             "question": question_text,
             "passages": [[p.id, p.text] for p in passages],
-        },
-        sort_keys=True,
-        separators=(",", ":"),
-        ensure_ascii=False,
+        }
     )
-    return hashlib.sha256(canonical.encode()).hexdigest()
 
 
 def build_prompt(
@@ -211,34 +213,31 @@ def build_support_prompt(
     citations: list[Citation],
     model: str,
     settings: dict[str, int | float | str],
-    system: str = SUPPORT_SYSTEM_PROMPT,
 ) -> Prompt:
     """The judge prompt: the question, the model answer and the Excerpt of each citation only."""
     listing = "\n".join(f"[{c.passage_id}] {c.excerpt}" for c in citations)
     user = f"Question: {question_text}\n\nAnswer: {answer}\n\nCited passages:\n{listing}"
-    canonical = json.dumps(
-        {"model": model, "settings": settings, "system": system, "user": user},
-        sort_keys=True,
-        separators=(",", ":"),
-        ensure_ascii=False,
-    )
+    system = SUPPORT_SYSTEM_PROMPT
     return Prompt(
         system=system,
         user=user,
         model=model,
         settings=settings,
         passage_ids=[c.passage_id for c in citations],
-        input_hash=hashlib.sha256(canonical.encode()).hexdigest(),
+        input_hash=_sha256_json(
+            {"model": model, "settings": settings, "system": system, "user": user}
+        ),
     )
 
 
 def support_warning(reply: SupportReply | None, error: str | None) -> Warning | None:
-    """The warning for the result of the support check: none for `supports`."""
+    """The warning for the result of the support check: none for `supports`. Without a reply the
+    check failed, and `error` is the error text of the judge call."""
     prefix = "Support check (model draft): "
     if reply is None:
-        return Warning(
-            kind="support_check_failed", message=f"{prefix}the check did not run. {error or ''}".strip()
-        )
+        if not error:
+            raise ValueError("a failed support check needs the error text of the call")
+        return Warning(kind="support_check_failed", message=f"{prefix}the check did not run. {error}")
     if reply.result == "contradicts":
         return Warning(
             kind="support_check",

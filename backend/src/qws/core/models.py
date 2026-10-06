@@ -1,4 +1,4 @@
-from typing import Annotated, Literal
+from typing import Annotated, Literal, Protocol
 
 from pydantic import BaseModel, Field, StringConstraints
 
@@ -162,6 +162,14 @@ class DrafterReply(BaseModel):
     latency_ms: int | None = None
     input_tokens: int | None = None
     output_tokens: int | None = None
+
+
+class Drafter(Protocol):
+    """Asks a model for an answer. Never raises: a failure comes back in `error`."""
+
+    def draft(self, prompt: Prompt) -> DrafterReply: ...
+
+    def judge(self, prompt: Prompt) -> DrafterReply: ...
 
 
 class ModelCallRow(BaseModel):

@@ -1,5 +1,7 @@
 import hashlib
 
+import pytest
+
 from qws.core.models import Citation, DocumentRow, PassageRow, QuestionRow, SupportReply
 from qws.core.rules import (
     SYSTEM_PROMPT,
@@ -219,3 +221,13 @@ def test_support_warning_is_none_for_supports_and_one_warning_otherwise():
         "Support check (model draft): the check did not run. Model call failed: timeout.",
         None,
     )
+
+
+def test_support_warning_refuses_a_failure_without_error_text():
+    # spec: 2.2 (p5)
+    # GIVEN a failed check with an empty or missing error
+    # WHEN the warning is built
+    # THEN it is refused, not silently written with no error text
+    for error in (None, ""):
+        with pytest.raises(ValueError):
+            support_warning(None, error)

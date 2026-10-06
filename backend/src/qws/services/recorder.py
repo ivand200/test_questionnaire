@@ -35,15 +35,16 @@ class Recorder:
                 if call is None:
                     continue
                 self._store.save_model_call(call)
-                failure = self._write_entry(path, call)
+                failure = self._write_entry(path, call, draft=call is asked.call)
                 if failure is not None:
                     failures.append(f"{question_id}: {prefix}{failure}")
         return failures
 
     @staticmethod
-    def _write_entry(path: Path, call: ModelCallRow) -> str | None:
-        """Write the entry of one call; return its error text when it gets no entry."""
-        if call.label == "simulated":
+    def _write_entry(path: Path, call: ModelCallRow, draft: bool) -> str | None:
+        """Write the entry of one call; return its error text when it gets no entry. Only a draft
+        call can be a Simulated entry: a failed judge call never gets an entry."""
+        if draft and call.label == "simulated":
             raw_response, error = call.raw_response, call.error
         elif call.error is not None or call.raw_response is None:
             return call.error
