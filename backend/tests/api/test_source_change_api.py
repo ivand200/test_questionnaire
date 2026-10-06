@@ -85,12 +85,12 @@ def test_the_summary_counts_needs_review_on_its_own(tmp_path):
 
     # THEN needs_review is 0 before; after it is 1, not in approved and not in answered
     assert before == {
-        "new": 0, "draft": 5, "unresolved": 1, "approved": 2, "needs_review": 0, "error": 1,
-        "answered": 7,
+        "new": 0, "draft": 6, "unresolved": 1, "approved": 2, "needs_review": 0, "error": 1,
+        "answered": 8,
     }
     assert after == {
-        "new": 0, "draft": 5, "unresolved": 1, "approved": 1, "needs_review": 1, "error": 1,
-        "answered": 6,
+        "new": 0, "draft": 6, "unresolved": 1, "approved": 1, "needs_review": 1, "error": 1,
+        "answered": 7,
     }
 
 
@@ -179,8 +179,8 @@ def test_a_needs_review_answer_is_not_reused_and_makes_no_model_call(tmp_path):
     assert drafter.asked == [q9_text]
     assert q9["status"] == "error"
     assert summary == {
-        "new": 0, "draft": 5, "unresolved": 1, "approved": 1, "needs_review": 1, "error": 1,
-        "answered": 6,
+        "new": 0, "draft": 6, "unresolved": 1, "approved": 1, "needs_review": 1, "error": 1,
+        "answered": 7,
     }
     assert q3["status"] == "approved"
     assert call_count(tmp_path, "Q1") == 2  # the draft call and the judge call

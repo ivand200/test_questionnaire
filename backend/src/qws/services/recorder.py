@@ -13,7 +13,7 @@ from qws.core.models import ModelCallRow, ReplayEntry
 from qws.services.draft_service import Drafter, DrafterConfig, ask_model
 
 RECORDING_LIST = [f"Q{n}" for n in range(1, 9)]  # Q1 to Q8, asked with the real model
-SIMULATED_LIST = ["Q9"]  # written through SimulatedDrafter; the real model is never asked
+SIMULATED_LIST = ["Q9", "Q10"]  # drafts written through SimulatedDrafter; only the Q10 judge asks the real model
 
 
 class Recorder:
@@ -68,8 +68,8 @@ def main() -> int:
     store, _ = open_store()
     config = drafter_config()
     recorder = Recorder(store, config)
-    simulated = SimulatedDrafter(config.model, config.settings)
     real = RealDrafter(config.model, os.environ.get("OPENAI_API_KEY", ""), config.settings)
+    simulated = SimulatedDrafter(config.model, config.settings, judge=real)
     failures = recorder.record(SIMULATED_LIST, simulated, REPLAY_PATH)
     failures += recorder.record(RECORDING_LIST, real, REPLAY_PATH)
     for message in failures:

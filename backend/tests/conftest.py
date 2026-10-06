@@ -8,9 +8,9 @@ from qws.api.main import create_app
 from qws.config import REPLAY_PATH, SEED_PATH
 from qws.services.draft_service import Drafter
 
-ALL = [f"Q{n}" for n in range(1, 10)]  # Q1 to Q8 from the Seed file, Q9 from the Demo file
+ALL = [f"Q{n}" for n in range(1, 11)]  # Q1 to Q8 from the Seed file, Q9 and Q10 from the Demo file
 EDIT = "No. CSV export needs a paid plan."
-ORIGINAL = "No. Free-plan users cannot export CSV; CSV exports are available on paid plans only."
+ORIGINAL = "No. Free-plan users cannot export CSV; CSV exports are available only on paid plans."
 
 
 @pytest.fixture(autouse=True)

@@ -6,13 +6,13 @@ from pydantic_ai.messages import ModelResponse, TextPart
 from pydantic_ai.models.function import FunctionModel
 
 from qws.adapters.real_drafter import RealDrafter
-from qws.adapters.simulated_drafter import SimulatedDrafter
+from qws.adapters.simulated_drafter import LYING_DRAFT, SimulatedDrafter
 from qws.adapters.store import Store
 from qws.config import MODEL_SETTINGS, SEED_PATH, open_store
 from qws.services import seed_loader
 from qws.services.draft_service import DrafterConfig
 from qws.core.rules import SUPPORT_SYSTEM_PROMPT
-from qws.services.recorder import RECORDING_LIST, Recorder
+from qws.services.recorder import RECORDING_LIST, SIMULATED_LIST, Recorder
 
 KEY = "secret-key-123"
 RAW = json.dumps(
@@ -21,6 +21,9 @@ RAW = json.dumps(
 
 
 JUDGE_RAW = json.dumps({"result": "supports", "reason": "The passage states the hours."})
+CONTRADICTS = json.dumps(
+    {"result": "contradicts", "reason": "The passage says free-plan users cannot export CSV."}
+)
 
 
 def answer(messages, info):
@@ -137,6 +140,41 @@ def test_the_recorder_writes_a_simulated_entry_for_q9_and_never_asks_the_real_mo
     assert entry["label"] == "simulated"
     assert entry["error"] == "Model call failed: timeout."
     assert "raw_response" not in entry
+
+
+def test_the_recorder_writes_q9_q10_and_the_q10_judge_entry_and_asks_no_draft_prompt(tmp_path):
+    # spec: 3.2-a
+    # GIVEN a fake model that answers only judge prompts with `contradicts`
+    prompts: list[str | None] = []
+
+    def judge_only(messages, info):
+        prompts.append(info.instructions)
+        assert info.instructions == SUPPORT_SYSTEM_PROMPT, "a draft prompt reached the model"
+        return ModelResponse(parts=[TextPart(CONTRADICTS)])
+
+    store, _ = open_store(tmp_path / "test.db")
+    recorder = Recorder(store, DrafterConfig("m1", MODEL_SETTINGS))
+    judge = RealDrafter("m1", KEY, MODEL_SETTINGS, model=FunctionModel(judge_only))
+    path = tmp_path / "responses.json"
+    assert SIMULATED_LIST == ["Q9", "Q10"]
+
+    # WHEN the Recorder records Q9 as simulated and Q10 as the Lying draft with that model as judge
+    failures = recorder.record(SIMULATED_LIST, SimulatedDrafter("m1", MODEL_SETTINGS, judge), path)
+
+    # THEN the file has the Q9 timeout entry, a Q10 simulated draft entry with the Lying draft and
+    # no error, and a Q10 real judge entry; the fake model got one prompt, the judge prompt
+    assert failures == []
+    q9, q10_draft, q10_judge = json.loads(path.read_text())
+    assert q9["label"] == "simulated"
+    assert q9["error"] == "Model call failed: timeout."
+    assert "raw_response" not in q9
+    assert q10_draft["label"] == "simulated"
+    assert q10_draft["raw_response"] == LYING_DRAFT
+    assert "error" not in q10_draft
+    assert q10_judge["label"] == "real"
+    assert q10_judge["raw_response"] == CONTRADICTS
+    assert len({q9["input_hash"], q10_draft["input_hash"], q10_judge["input_hash"]}) == 3
+    assert prompts == [SUPPORT_SYSTEM_PROMPT]
 
 
 def test_the_recording_list_is_q1_to_q8_and_a_second_run_keeps_one_entry_per_hash(tmp_path):

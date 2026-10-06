@@ -1,29 +1,5 @@
 [
   {
-    "input_hash": "e741a8a50abf8bcc9fe9f82db2f7e771d39002cef9da177eaf86a138a2244ef0",
-    "label": "simulated",
-    "model": "gpt-6-luna",
-    "settings": {
-      "temperature": 0,
-      "max_tokens": 1000,
-      "openai_reasoning_effort": "medium"
-    },
-    "error": "Model call failed: timeout.",
-    "recorded_at": "2026-10-06T23:07:36.926208+00:00"
-  },
-  {
-    "input_hash": "72b7383a0faf5d96639fd3a8855b9ba89746789016ed9e136d882840fd9135f1",
-    "label": "real",
-    "model": "gpt-6-luna",
-    "settings": {
-      "temperature": 0,
-      "max_tokens": 1000,
-      "openai_reasoning_effort": "medium"
-    },
-    "raw_response": "{\"answer\":\"No. Free-plan users cannot export CSV; CSV exports are available on paid plans only.\",\"verdict\":\"supported\",\"citations\":[\"EXPORT-v2:p1\"]}",
-    "recorded_at": "2026-10-06T23:07:39.848484+00:00"
-  },
-  {
     "input_hash": "8376ea7fe6633d830e4e04d23df82a1ffbfbd8b835018a9e51a6858af530b702",
     "label": "real",
     "model": "gpt-6-luna",
@@ -34,126 +10,6 @@
     },
     "raw_response": "{\"result\":\"supports\",\"reason\":\"The passage states that CSV exports are available only on paid plans and that free-plan users cannot export CSV.\"}",
     "recorded_at": "2026-10-06T23:07:42.853336+00:00"
-  },
-  {
-    "input_hash": "0a30d3a748d117a429866dd3016aa1e023c2369643869c65aed60f05c82430af",
-    "label": "real",
-    "model": "gpt-6-luna",
-    "settings": {
-      "temperature": 0,
-      "max_tokens": 1000,
-      "openai_reasoning_effort": "medium"
-    },
-    "raw_response": "{\"answer\":\"JSON export availability is not documented.\",\"verdict\":\"not_documented\",\"citations\":[]}",
-    "recorded_at": "2026-10-06T23:07:46.149599+00:00"
-  },
-  {
-    "input_hash": "69bedcc14f2317f761f1bb6dab611caa2269a24e0352d409ce0310959c372c16",
-    "label": "real",
-    "model": "gpt-6-luna",
-    "settings": {
-      "temperature": 0,
-      "max_tokens": 1000,
-      "openai_reasoning_effort": "medium"
-    },
-    "raw_response": "{\"answer\":\"Email support is available Monday to Friday, 09:00 to 17:00 UTC.\",\"verdict\":\"supported\",\"citations\":[\"SUPPORT-v1:p1\"]}",
-    "recorded_at": "2026-10-06T23:07:50.128232+00:00"
-  },
-  {
-    "input_hash": "aad566bcb7db842374edb5e639b8ebc485169e64daff3fd3527ae6d9881a2c88",
-    "label": "real",
-    "model": "gpt-6-luna",
-    "settings": {
-      "temperature": 0,
-      "max_tokens": 1000,
-      "openai_reasoning_effort": "medium"
-    },
-    "raw_response": "{\"result\":\"supports\",\"reason\":\"The passage states that email support is available Monday to Friday, 09:00 to 17:00 UTC.\"}",
-    "recorded_at": "2026-10-06T23:07:51.437594+00:00"
-  },
-  {
-    "input_hash": "e0b322e7ac0fbdaf30702df93599e44f66b0ec1b19950b19fe7a0f396fd54490",
-    "label": "real",
-    "model": "gpt-6-luna",
-    "settings": {
-      "temperature": 0,
-      "max_tokens": 1000,
-      "openai_reasoning_effort": "medium"
-    },
-    "raw_response": "{\"answer\":\"No, live chat is not offered.\",\"verdict\":\"supported\",\"citations\":[\"SUPPORT-v1:p1\"]}",
-    "recorded_at": "2026-10-06T23:07:52.754909+00:00"
-  },
-  {
-    "input_hash": "e58f4ceb43a7b1bcad2d8392d2a4d5ca152592e60a904a2b081440b6e481e6dc",
-    "label": "real",
-    "model": "gpt-6-luna",
-    "settings": {
-      "temperature": 0,
-      "max_tokens": 1000,
-      "openai_reasoning_effort": "medium"
-    },
-    "raw_response": "{\"result\":\"supports\",\"reason\":\"The passage explicitly states that live chat is not offered.\"}",
-    "recorded_at": "2026-10-06T23:07:54.838082+00:00"
-  },
-  {
-    "input_hash": "cff8758f95ea3e578cfafc815cb21da2664927a602df6742e76bc2b35dd69008",
-    "label": "real",
-    "model": "gpt-6-luna",
-    "settings": {
-      "temperature": 0,
-      "max_tokens": 1000,
-      "openai_reasoning_effort": "medium"
-    },
-    "raw_response": "{\"answer\":\"Users sign in with their email and password.\",\"verdict\":\"supported\",\"citations\":[\"ACCESS-v1:p1\"]}",
-    "recorded_at": "2026-10-06T23:07:55.965772+00:00"
-  },
-  {
-    "input_hash": "68493bad9872b757310b0244299f5731dae8c16542c6d382893b31ac96e4127d",
-    "label": "real",
-    "model": "gpt-6-luna",
-    "settings": {
-      "temperature": 0,
-      "max_tokens": 1000,
-      "openai_reasoning_effort": "medium"
-    },
-    "raw_response": "{\"result\":\"supports\",\"reason\":\"The passage says users can sign in with email and password.\"}",
-    "recorded_at": "2026-10-06T23:07:57.615905+00:00"
-  },
-  {
-    "input_hash": "e5c0ed40de54b29a9dba48729c9dbfe640d729794aa59eb3351c1aaa7bc8d78c",
-    "label": "real",
-    "model": "gpt-6-luna",
-    "settings": {
-      "temperature": 0,
-      "max_tokens": 1000,
-      "openai_reasoning_effort": "medium"
-    },
-    "raw_response": "{\"answer\":\"Account owners can invite team members.\",\"verdict\":\"supported\",\"citations\":[\"ACCESS-v1:p1\"]}",
-    "recorded_at": "2026-10-06T23:08:00.099313+00:00"
-  },
-  {
-    "input_hash": "79ae3b27dab803813b99117d51fc1ff1acddfc73321f5bdf3dac68c0733bc927",
-    "label": "real",
-    "model": "gpt-6-luna",
-    "settings": {
-      "temperature": 0,
-      "max_tokens": 1000,
-      "openai_reasoning_effort": "medium"
-    },
-    "raw_response": "{\"result\":\"supports\",\"reason\":\"The passage explicitly says that account owners can invite team members.\"}",
-    "recorded_at": "2026-10-06T23:08:02.216458+00:00"
-  },
-  {
-    "input_hash": "5d6c6a937f22c075142033bc4ae2d3d744ff886a60ce04bc2ab2f02fe6f25f24",
-    "label": "real",
-    "model": "gpt-6-luna",
-    "settings": {
-      "temperature": 0,
-      "max_tokens": 1000,
-      "openai_reasoning_effort": "medium"
-    },
-    "raw_response": "{\"answer\":\"Subscriptions are billed monthly in USD.\",\"verdict\":\"supported\",\"citations\":[\"BILLING-v1:p1\"]}",
-    "recorded_at": "2026-10-06T23:08:03.354079+00:00"
   },
   {
     "input_hash": "5c7e912e92c99e56a7f136a8bbdd342f19307bd4e699b5c36af09aa7e42e98ef",
@@ -168,6 +24,198 @@
     "recorded_at": "2026-10-06T23:08:04.563582+00:00"
   },
   {
+    "input_hash": "e741a8a50abf8bcc9fe9f82db2f7e771d39002cef9da177eaf86a138a2244ef0",
+    "label": "simulated",
+    "model": "gpt-6-luna",
+    "settings": {
+      "temperature": 0,
+      "max_tokens": 1000,
+      "openai_reasoning_effort": "medium"
+    },
+    "error": "Model call failed: timeout.",
+    "recorded_at": "2026-10-06T23:14:47.839912+00:00"
+  },
+  {
+    "input_hash": "7cd652eb5cef68b985b3c73e71a2938d9ac12cd82e293b1bafb818de65bf5be4",
+    "label": "simulated",
+    "model": "gpt-6-luna",
+    "settings": {
+      "temperature": 0,
+      "max_tokens": 1000,
+      "openai_reasoning_effort": "medium"
+    },
+    "raw_response": "{\"answer\": \"Yes. Free-plan users can export CSV.\", \"verdict\": \"supported\", \"citations\": [\"EXPORT-v2:p1\"]}",
+    "recorded_at": "2026-10-06T23:14:47.842579+00:00"
+  },
+  {
+    "input_hash": "3f1462cb03ed6d3a2b6038fe816ebe74a9b5f45a78c9538864cbdb30eb966d6c",
+    "label": "real",
+    "model": "gpt-6-luna",
+    "settings": {
+      "temperature": 0,
+      "max_tokens": 1000,
+      "openai_reasoning_effort": "medium"
+    },
+    "raw_response": "{\"result\":\"contradicts\",\"reason\":\"The passage says CSV exports are available only on paid plans and free-plan users cannot export CSV.\"}",
+    "recorded_at": "2026-10-06T23:14:49.243559+00:00"
+  },
+  {
+    "input_hash": "72b7383a0faf5d96639fd3a8855b9ba89746789016ed9e136d882840fd9135f1",
+    "label": "real",
+    "model": "gpt-6-luna",
+    "settings": {
+      "temperature": 0,
+      "max_tokens": 1000,
+      "openai_reasoning_effort": "medium"
+    },
+    "raw_response": "{\"answer\":\"No. Free-plan users cannot export CSV; CSV exports are available only on paid plans.\",\"verdict\":\"supported\",\"citations\":[\"EXPORT-v2:p1\"]}",
+    "recorded_at": "2026-10-06T23:14:50.615287+00:00"
+  },
+  {
+    "input_hash": "70d1dff9d6d88946ca894279c03765153876b80dd2f6fe19504ef2006917ddec",
+    "label": "real",
+    "model": "gpt-6-luna",
+    "settings": {
+      "temperature": 0,
+      "max_tokens": 1000,
+      "openai_reasoning_effort": "medium"
+    },
+    "raw_response": "{\"result\":\"supports\",\"reason\":\"The passage explicitly says CSV exports are paid-plan only and free-plan users cannot export CSV.\"}",
+    "recorded_at": "2026-10-06T23:14:52.847568+00:00"
+  },
+  {
+    "input_hash": "0a30d3a748d117a429866dd3016aa1e023c2369643869c65aed60f05c82430af",
+    "label": "real",
+    "model": "gpt-6-luna",
+    "settings": {
+      "temperature": 0,
+      "max_tokens": 1000,
+      "openai_reasoning_effort": "medium"
+    },
+    "raw_response": "{\"answer\":\"The passages do not specify whether JSON export is available.\",\"verdict\":\"not_documented\",\"citations\":[]}",
+    "recorded_at": "2026-10-06T23:14:54.100682+00:00"
+  },
+  {
+    "input_hash": "69bedcc14f2317f761f1bb6dab611caa2269a24e0352d409ce0310959c372c16",
+    "label": "real",
+    "model": "gpt-6-luna",
+    "settings": {
+      "temperature": 0,
+      "max_tokens": 1000,
+      "openai_reasoning_effort": "medium"
+    },
+    "raw_response": "{\"answer\":\"Email support is available Monday to Friday, 09:00 to 17:00 UTC.\",\"verdict\":\"supported\",\"citations\":[\"SUPPORT-v1:p1\"]}",
+    "recorded_at": "2026-10-06T23:14:55.711059+00:00"
+  },
+  {
+    "input_hash": "aad566bcb7db842374edb5e639b8ebc485169e64daff3fd3527ae6d9881a2c88",
+    "label": "real",
+    "model": "gpt-6-luna",
+    "settings": {
+      "temperature": 0,
+      "max_tokens": 1000,
+      "openai_reasoning_effort": "medium"
+    },
+    "raw_response": "{\"result\":\"supports\",\"reason\":\"The passage states that email support is available Monday to Friday, 09:00 to 17:00 UTC.\"}",
+    "recorded_at": "2026-10-06T23:14:57.557641+00:00"
+  },
+  {
+    "input_hash": "e0b322e7ac0fbdaf30702df93599e44f66b0ec1b19950b19fe7a0f396fd54490",
+    "label": "real",
+    "model": "gpt-6-luna",
+    "settings": {
+      "temperature": 0,
+      "max_tokens": 1000,
+      "openai_reasoning_effort": "medium"
+    },
+    "raw_response": "{\"answer\":\"No, live chat is not offered.\",\"verdict\":\"supported\",\"citations\":[\"SUPPORT-v1:p1\"]}",
+    "recorded_at": "2026-10-06T23:14:58.785747+00:00"
+  },
+  {
+    "input_hash": "e58f4ceb43a7b1bcad2d8392d2a4d5ca152592e60a904a2b081440b6e481e6dc",
+    "label": "real",
+    "model": "gpt-6-luna",
+    "settings": {
+      "temperature": 0,
+      "max_tokens": 1000,
+      "openai_reasoning_effort": "medium"
+    },
+    "raw_response": "{\"result\":\"supports\",\"reason\":\"The passage explicitly states that live chat is not offered.\"}",
+    "recorded_at": "2026-10-06T23:15:00.208238+00:00"
+  },
+  {
+    "input_hash": "cff8758f95ea3e578cfafc815cb21da2664927a602df6742e76bc2b35dd69008",
+    "label": "real",
+    "model": "gpt-6-luna",
+    "settings": {
+      "temperature": 0,
+      "max_tokens": 1000,
+      "openai_reasoning_effort": "medium"
+    },
+    "raw_response": "{\"answer\":\"Users sign in with their email and password.\",\"verdict\":\"supported\",\"citations\":[\"ACCESS-v1:p1\"]}",
+    "recorded_at": "2026-10-06T23:15:01.338386+00:00"
+  },
+  {
+    "input_hash": "68493bad9872b757310b0244299f5731dae8c16542c6d382893b31ac96e4127d",
+    "label": "real",
+    "model": "gpt-6-luna",
+    "settings": {
+      "temperature": 0,
+      "max_tokens": 1000,
+      "openai_reasoning_effort": "medium"
+    },
+    "raw_response": "{\"result\":\"supports\",\"reason\":\"The passage states that users can sign in with email and password.\"}",
+    "recorded_at": "2026-10-06T23:15:02.460532+00:00"
+  },
+  {
+    "input_hash": "e5c0ed40de54b29a9dba48729c9dbfe640d729794aa59eb3351c1aaa7bc8d78c",
+    "label": "real",
+    "model": "gpt-6-luna",
+    "settings": {
+      "temperature": 0,
+      "max_tokens": 1000,
+      "openai_reasoning_effort": "medium"
+    },
+    "raw_response": "{\"answer\":\"Account owners can invite team members.\",\"verdict\":\"supported\",\"citations\":[\"ACCESS-v1:p1\"]}",
+    "recorded_at": "2026-10-06T23:15:04.402938+00:00"
+  },
+  {
+    "input_hash": "79ae3b27dab803813b99117d51fc1ff1acddfc73321f5bdf3dac68c0733bc927",
+    "label": "real",
+    "model": "gpt-6-luna",
+    "settings": {
+      "temperature": 0,
+      "max_tokens": 1000,
+      "openai_reasoning_effort": "medium"
+    },
+    "raw_response": "{\"result\":\"supports\",\"reason\":\"The passage explicitly says account owners can invite team members.\"}",
+    "recorded_at": "2026-10-06T23:15:06.453827+00:00"
+  },
+  {
+    "input_hash": "5d6c6a937f22c075142033bc4ae2d3d744ff886a60ce04bc2ab2f02fe6f25f24",
+    "label": "real",
+    "model": "gpt-6-luna",
+    "settings": {
+      "temperature": 0,
+      "max_tokens": 1000,
+      "openai_reasoning_effort": "medium"
+    },
+    "raw_response": "{\"answer\":\"Paid subscriptions are billed monthly in USD.\",\"verdict\":\"supported\",\"citations\":[\"BILLING-v1:p1\"]}",
+    "recorded_at": "2026-10-06T23:15:07.769469+00:00"
+  },
+  {
+    "input_hash": "661b376e7e4ea39ba5e8c1b7a9a9fdecfcc9306e5375a69b29057dd0cba5c2ae",
+    "label": "real",
+    "model": "gpt-6-luna",
+    "settings": {
+      "temperature": 0,
+      "max_tokens": 1000,
+      "openai_reasoning_effort": "medium"
+    },
+    "raw_response": "{\"result\":\"supports\",\"reason\":\"The cited passage states that paid subscriptions are billed monthly in USD.\"}",
+    "recorded_at": "2026-10-06T23:15:09.852252+00:00"
+  },
+  {
     "input_hash": "7f4f6af4c7b05b795467307841a863d643d6843037144659a0efd1f270bbdcfb",
     "label": "real",
     "model": "gpt-6-luna",
@@ -177,7 +225,7 @@
       "openai_reasoning_effort": "medium"
     },
     "raw_response": "{\"answer\":\"Account owners can download billing invoices.\",\"verdict\":\"supported\",\"citations\":[\"BILLING-v1:p1\"]}",
-    "recorded_at": "2026-10-06T23:08:06.009426+00:00"
+    "recorded_at": "2026-10-06T23:15:11.589991+00:00"
   },
   {
     "input_hash": "96a10da691b3ecbc3046f2e2c1bc44306677fec89b5520e56081b8d4bb07c064",
@@ -188,7 +236,7 @@
       "max_tokens": 1000,
       "openai_reasoning_effort": "medium"
     },
-    "raw_response": "{\"result\":\"supports\",\"reason\":\"The passage explicitly says account owners can download billing invoices.\"}",
-    "recorded_at": "2026-10-06T23:08:08.153468+00:00"
+    "raw_response": "{\"result\":\"supports\",\"reason\":\"The passage explicitly states that account owners can download billing invoices.\"}",
+    "recorded_at": "2026-10-06T23:15:13.006151+00:00"
   }
 ]

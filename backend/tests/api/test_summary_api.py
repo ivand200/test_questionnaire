@@ -16,11 +16,11 @@ def test_summary_counts_after_run_all(tmp_path):
         # WHEN the client sends GET /api/summary
         response = client.get("/api/summary")
 
-    # THEN the counts are 0 new, 7 draft, 1 unresolved, 0 approved, 0 needs_review, 1 error, 7 answered
+    # THEN the counts are 0 new, 8 draft, 1 unresolved, 0 approved, 0 needs_review, 1 error, 8 answered
     assert response.status_code == 200
     assert response.json() == {
-        "new": 0, "draft": 7, "unresolved": 1, "approved": 0, "needs_review": 0, "error": 1,
-        "answered": 7,
+        "new": 0, "draft": 8, "unresolved": 1, "approved": 0, "needs_review": 0, "error": 1,
+        "answered": 8,
     }
 
 
@@ -33,10 +33,10 @@ def test_summary_counts_an_approved_question_once_as_approved(tmp_path):
         # WHEN the client sends GET /api/summary
         response = client.get("/api/summary")
 
-    # THEN draft is 6 and approved is 1; answered stays 7
+    # THEN draft is 7 and approved is 1; answered stays 8
     assert response.json() == {
-        "new": 0, "draft": 6, "unresolved": 1, "approved": 1, "needs_review": 0, "error": 1,
-        "answered": 7,
+        "new": 0, "draft": 7, "unresolved": 1, "approved": 1, "needs_review": 0, "error": 1,
+        "answered": 8,
     }
     assert len(approved_rows(tmp_path)) == 1
 
@@ -66,9 +66,9 @@ def test_filter_draft_returns_seed_order(tmp_path):
         response = client.get("/api/questions", params={"status": "draft"})
         everything = client.get("/api/questions").json()
 
-    # THEN Q3, Q4, Q5, Q6, Q7, Q8 in this order; without status all 9 come back
-    assert [q["id"] for q in response.json()] == ["Q3", "Q4", "Q5", "Q6", "Q7", "Q8"]
-    assert len(everything) == 9
+    # THEN Q3 to Q8 and Q10 in this order; without status all 10 come back
+    assert [q["id"] for q in response.json()] == ["Q3", "Q4", "Q5", "Q6", "Q7", "Q8", "Q10"]
+    assert len(everything) == 10
 
 
 def test_an_unknown_status_filter_gives_422(tmp_path):

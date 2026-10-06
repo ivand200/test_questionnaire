@@ -43,7 +43,7 @@ def test_ask_again_on_an_approved_question_returns_the_approved_view_with_no_mod
 
 def test_run_all_skips_an_approved_question_and_asks_the_rest(tmp_path):
     # spec: 4.3-a
-    # GIVEN Q1 is approved; Q2 to Q9 are new
+    # GIVEN Q1 is approved; Q2 to Q10 are new
     with make_client(tmp_path) as client:
         client.post("/api/questions/Q1/draft")
         client.post("/api/questions/Q1/approve", json={"approver": "Anna"})
@@ -51,7 +51,7 @@ def test_run_all_skips_an_approved_question_and_asks_the_rest(tmp_path):
         # WHEN the client sends POST /api/questionnaire/run
         response = client.post("/api/questionnaire/run")
 
-    # THEN asked is Q2 to Q9; Q1 is not asked and keeps its 2 model calls
+    # THEN asked is Q2 to Q10; Q1 is not asked and keeps its 2 model calls
     assert response.json() == {"asked": ALL[1:]}
     assert call_count(tmp_path, "Q1") == 2  # the draft call and the judge call
 

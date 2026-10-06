@@ -9,23 +9,31 @@ TIMEOUT = "Model call failed: timeout."
 
 
 def q9_entry(entries: list[dict]) -> dict:
-    [entry] = [e for e in entries if e.get("label") == "simulated"]
+    [entry] = [e for e in entries if e.get("label") == "simulated" and e.get("error")]
     return entry
 
 
-def test_the_demo_question_q9_is_listed_last_and_there_are_no_load_issues(tmp_path):
-    # spec: 3.1-a
-    # GIVEN the real Seed and the Demo file with Q9
+def test_the_demo_questions_q9_and_q10_are_listed_last_and_there_are_no_load_issues(tmp_path):
+    # spec: 3.1-a, 4.1-a
+    # GIVEN the real Seed and the Demo file with Q9 and Q10
     with make_client(tmp_path) as client:
-        # WHEN a client sends GET /api/questions
+        # WHEN a client sends GET /api/questions and GET /api/load-issues, and Q1 is approved
         body = client.get("/api/questions").json()
         issues = client.get("/api/load-issues").json()
+        client.post("/api/questions/Q1/draft")
+        client.post("/api/questions/Q1/approve", json={"approver": "Anna"})
+        after = {q["id"]: q["status"] for q in client.get("/api/questions").json()}
 
-    # THEN 9 items Q1 to Q9 in this order; Q9 has topic support and status new; no load issues
+    # THEN 10 items Q1 to Q10 in this order; Q9 has topic support and status new; Q10 has topic
+    # exports and status new; no load issues; approving Q1 does not approve Q10
     assert [q["id"] for q in body] == ALL
     assert body[8]["topic"] == "support"
     assert body[8]["status"] == "new"
+    assert (body[9]["topic"], body[9]["status"]) == ("exports", "new")
+    assert body[9]["text"] == "Does the free plan include CSV export?"
     assert issues == []
+    assert after["Q1"] == "approved"
+    assert after["Q10"] == "new"
 
 
 def test_asking_q9_in_replay_mode_gives_a_simulated_error(tmp_path):

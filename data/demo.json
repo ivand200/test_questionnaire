@@ -4,6 +4,11 @@
       "id": "Q9",
       "topic": "support",
       "text": "What is the response time for priority support tickets?"
+    },
+    {
+      "id": "Q10",
+      "topic": "exports",
+      "text": "Does the free plan include CSV export?"
     }
   ]
 }
