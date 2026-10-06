@@ -10,5 +10,17 @@
     },
     "raw_response": "{\"answer\":\"Email support is available Monday to Friday, 09:00 to 17:00 UTC.\",\"verdict\":\"supported\",\"citations\":[\"SUPPORT-v1:p1\"]}",
     "recorded_at": "2026-10-06T15:49:03.720414+00:00"
+  },
+  {
+    "input_hash": "e741a8a50abf8bcc9fe9f82db2f7e771d39002cef9da177eaf86a138a2244ef0",
+    "label": "simulated",
+    "model": "gpt-6-luna",
+    "settings": {
+      "temperature": 0,
+      "max_tokens": 1000,
+      "openai_reasoning_effort": "medium"
+    },
+    "error": "Model call failed: timeout.",
+    "recorded_at": "2026-10-06T19:16:39.918121+00:00"
   }
 ]

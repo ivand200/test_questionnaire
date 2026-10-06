@@ -9,6 +9,7 @@ from fastapi.staticfiles import StaticFiles
 from qws.adapters.real_drafter import RealDrafter
 from qws.adapters.replay_drafter import ReplayDrafter
 from qws.config import (
+    DEMO_PATH,
     REPLAY_PATH,
     REPO_DIR,
     SEED_PATH,
@@ -47,10 +48,11 @@ def create_app(
     seed_path: Path = SEED_PATH,
     drafter: Drafter | None = None,
     replay_path: Path = REPLAY_PATH,
+    demo_path: Path | None = None,
 ) -> FastAPI:
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
-        store, app.state.load_issues = open_store(db_path, seed_path)
+        store, app.state.load_issues = open_store(db_path, seed_path, demo_path)
         app.state.store = store
         config = drafter_config()
         app.state.service = DraftService(
@@ -96,4 +98,4 @@ def create_app(
     return app
 
 
-app = create_app()
+app = create_app(demo_path=DEMO_PATH)

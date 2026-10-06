@@ -6,12 +6,14 @@ from pathlib import Path
 
 from qws.adapters.real_drafter import RealDrafter
 from qws.adapters.replay_file import add_entry
+from qws.adapters.simulated_drafter import SimulatedDrafter
 from qws.adapters.store import Store
-from qws.config import REPLAY_PATH, drafter_config, open_store
+from qws.config import DEMO_PATH, REPLAY_PATH, drafter_config, open_store
 from qws.core.models import ReplayEntry
 from qws.services.draft_service import Drafter, DrafterConfig, attempt
 
 RECORDING_LIST = ["Q3"]
+SIMULATED_LIST = ["Q9"]  # written through SimulatedDrafter; the real model is never asked
 
 
 class Recorder:
@@ -29,6 +31,19 @@ class Recorder:
                 continue
             call = attempt(self._store, drafter, self._config, question).call
             self._store.save_model_call(call)
+            if call.label == "simulated" and call.error is not None:
+                add_entry(
+                    path,
+                    ReplayEntry(
+                        input_hash=call.input_hash,
+                        label=call.label,
+                        model=call.model,
+                        settings=call.settings,
+                        error=call.error,
+                        recorded_at=call.created_at,
+                    ),
+                )
+                continue
             if call.error is not None or call.raw_response is None:
                 failures.append(f"{question_id}: {call.error}")
                 continue
@@ -47,14 +62,17 @@ class Recorder:
 
 
 def main() -> int:
-    store, _ = open_store()
+    store, _ = open_store(demo_path=DEMO_PATH)
     config = drafter_config()
-    drafter = RealDrafter(config.model, os.environ.get("OPENAI_API_KEY", ""), config.settings)
-    failures = Recorder(store, config).record(RECORDING_LIST, drafter, REPLAY_PATH)
+    recorder = Recorder(store, config)
+    simulated = SimulatedDrafter(config.model, config.settings)
+    real = RealDrafter(config.model, os.environ.get("OPENAI_API_KEY", ""), config.settings)
+    failures = recorder.record(SIMULATED_LIST, simulated, REPLAY_PATH)
+    failures += recorder.record(RECORDING_LIST, real, REPLAY_PATH)
     for message in failures:
         print(message, file=sys.stderr)
     if not failures:
-        print(f"Recorded {', '.join(RECORDING_LIST)} with {config.model} in {REPLAY_PATH}.")
+        print(f"Recorded {', '.join(SIMULATED_LIST + RECORDING_LIST)} with {config.model} in {REPLAY_PATH}.")
     return 1 if failures else 0
 
 

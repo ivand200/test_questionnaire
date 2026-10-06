@@ -1,6 +1,6 @@
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 
 # Rows of the seed tables (what the Store keeps).
@@ -155,6 +155,7 @@ class DraftRow(BaseModel):
     model_call_id: int | None
     updated_at: str
     error: str | None = None  # read from the model call; never written here
+    label: Label | None = None  # read from the model call; never written here
 
 
 class QuestionSummary(BaseModel):
@@ -174,16 +175,27 @@ class QuestionView(BaseModel):
     warnings: list[Warning]
     owner: str | None
     replaced: list[ReplacedEvidence]
+    label: Label | None
     error: str | None
     allowed_actions: list[Literal["generate", "retry"]]
 
 
 class ReplayEntry(BaseModel):
-    """One saved real reply in replay/responses.json, found by input hash."""
+    """One saved reply in replay/responses.json, found by input hash.
+
+    Exactly one of raw_response and error is set; an error entry is a Simulated entry.
+    """
 
     input_hash: str
     label: Label
     model: str
     settings: dict[str, int | float | str]
-    raw_response: str
+    raw_response: str | None = None
+    error: str | None = None
     recorded_at: str
+
+    @model_validator(mode="after")
+    def _exactly_one_of_reply_and_error(self) -> "ReplayEntry":
+        if (self.raw_response is None) == (self.error is None):
+            raise ValueError("exactly one of raw_response and error must be set")
+        return self

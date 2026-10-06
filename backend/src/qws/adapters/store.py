@@ -120,6 +120,7 @@ class Store:
             warnings=(draft.warnings if draft else []) + superseded,
             owner=self.get_owner(question.topic),
             replaced=replaced,
+            label=draft.label if draft else None,
             error=draft.error if draft and status == "error" else None,
             allowed_actions=_allowed_actions(status),
         )
@@ -146,10 +147,10 @@ class Store:
         return [PassageRow(**dict(r)) for r in rows]
 
     def get_draft(self, question_id: str) -> DraftRow | None:
-        """The draft row; `error` is the message of its model call."""
+        """The draft row; `error` and `label` come from its model call."""
         with self._connect() as conn:
             row = conn.execute(
-                "SELECT d.*, m.error AS error FROM draft d"
+                "SELECT d.*, m.error AS error, m.label AS label FROM draft d"
                 " LEFT JOIN model_call m ON m.id = d.model_call_id"
                 " WHERE d.question_id = ?",
                 (question_id,),
@@ -188,7 +189,7 @@ class Store:
                 " VALUES (:question_id, :status, :verdict, :model_answer, :citations,"
                 " :warnings, :model_call_id, :updated_at)",
                 {
-                    **draft.model_dump(exclude={"citations", "warnings", "error"}),
+                    **draft.model_dump(exclude={"citations", "warnings", "error", "label"}),
                     "citations": json.dumps([c.model_dump() for c in draft.citations]),
                     "warnings": json.dumps([w.model_dump() for w in draft.warnings]),
                     "model_call_id": call_id,

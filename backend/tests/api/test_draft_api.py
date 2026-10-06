@@ -84,7 +84,7 @@ def test_asking_for_q3_saves_a_draft_with_the_exact_passage_as_excerpt(tmp_path)
 
 
 def test_a_question_with_status_error_can_be_asked_again(tmp_path):
-    # spec: 2.1-b
+    # spec: 2.1-b, 3.5-b
     # GIVEN Q3 has status error and one failed model call
     drafter = FakeDrafter(failed("Model call failed: timeout."), ok())
     with make_client(tmp_path, drafter) as client:

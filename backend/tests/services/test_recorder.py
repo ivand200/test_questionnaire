@@ -5,8 +5,9 @@ from pydantic_ai.messages import ModelResponse, TextPart
 from pydantic_ai.models.function import FunctionModel
 
 from qws.adapters.real_drafter import RealDrafter
+from qws.adapters.simulated_drafter import SimulatedDrafter
 from qws.adapters.store import Store
-from qws.config import MODEL_SETTINGS, SEED_PATH
+from qws.config import DEMO_PATH, MODEL_SETTINGS, SEED_PATH
 from qws.services import seed_loader
 from qws.services.draft_service import DrafterConfig
 from qws.services.recorder import Recorder
@@ -77,3 +78,25 @@ def test_a_failed_call_adds_no_entry_and_is_reported(tmp_path):
     # THEN the failure is reported and the file is not created
     assert failures == ["Q3: Model call failed: timeout."]
     assert not path.exists()
+
+
+def test_the_recorder_writes_a_simulated_entry_for_q9_and_never_asks_the_real_model(tmp_path):
+    # spec: 5.2-a
+    # GIVEN the Seed and the Demo file; no model is built, so none can be asked
+    seed = json.loads(SEED_PATH.read_text())
+    seed["questions"] += json.loads(DEMO_PATH.read_text())["questions"]
+    store = Store(tmp_path / "test.db")
+    store.init_schema()
+    seed_loader.load(seed, store)
+    recorder = Recorder(store, DrafterConfig("m1", MODEL_SETTINGS))
+    path = tmp_path / "responses.json"
+
+    # WHEN the Recorder runs with Q9 through SimulatedDrafter
+    failures = recorder.record(["Q9"], SimulatedDrafter("m1", MODEL_SETTINGS), path)
+
+    # THEN the file has one entry for Q9 with label simulated, the error, and no raw_response
+    assert failures == []
+    [entry] = json.loads(path.read_text())
+    assert entry["label"] == "simulated"
+    assert entry["error"] == "Model call failed: timeout."
+    assert "raw_response" not in entry

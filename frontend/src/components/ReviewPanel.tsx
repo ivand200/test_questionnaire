@@ -40,7 +40,7 @@ export function ReviewPanel({ questionId }: { questionId: string }) {
   return (
     <section>
       <h2>
-        {q.id} [{q.status}]
+        {q.id} [{q.status}]{q.label && <> [{q.label}]</>}
       </h2>
       <p>{q.text}</p>
       {q.answer && (

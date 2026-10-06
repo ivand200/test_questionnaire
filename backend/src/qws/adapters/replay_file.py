@@ -22,5 +22,5 @@ def add_entry(path: Path, entry: ReplayEntry) -> None:
     entries.append(entry)
     path.parent.mkdir(parents=True, exist_ok=True)
     temp = path.with_suffix(".tmp")
-    temp.write_bytes(_ENTRIES.dump_json(entries, indent=2) + b"\n")
+    temp.write_bytes(_ENTRIES.dump_json(entries, indent=2, exclude_none=True) + b"\n")
     os.replace(temp, path)

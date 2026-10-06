@@ -154,6 +154,8 @@ export interface components {
             owner: string | null;
             /** Replaced */
             replaced: components["schemas"]["ReplacedEvidence"][];
+            /** Label */
+            label: ("real" | "cached" | "simulated") | null;
             /** Error */
             error: string | null;
             /** Allowed Actions */
