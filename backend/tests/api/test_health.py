@@ -69,3 +69,19 @@ def test_without_built_frontend_health_answers_and_root_is_404(tmp_path):
     assert health.status_code == 200
     assert health.json() == {"status": "ok"}
     assert root.status_code == 404
+
+
+def test_root_serves_frontend_built_after_startup(tmp_path):
+    # spec: 2.1-a
+    # GIVEN the Backend started before frontend/dist/ existed
+    dist = tmp_path / "dist"
+    client = make_client(dist)
+    assert client.get("/").status_code == 404
+
+    # WHEN the frontend is built and a client sends GET /
+    make_dist(tmp_path)
+    response = client.get("/")
+
+    # THEN HTTP 200 with the built index.html, without restarting the Backend
+    assert response.status_code == 200
+    assert '<div id="root">' in response.text

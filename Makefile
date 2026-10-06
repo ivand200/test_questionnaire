@@ -15,6 +15,8 @@ test:
 	cd backend && uv run pytest
 
 types:
-	cd backend && uv run python -c "import json; from qws.api.main import app; print(json.dumps(app.openapi()))" > ../frontend/openapi.tmp.json
-	cd frontend && pnpm exec openapi-typescript openapi.tmp.json -o src/api/api.d.ts
-	rm -f frontend/openapi.tmp.json
+	(cd backend && uv run python -c "import json; from qws.api.main import app; print(json.dumps(app.openapi()))") > frontend/openapi.tmp.json; \
+	status=$$?; \
+	if [ $$status -eq 0 ]; then (cd frontend && pnpm exec openapi-typescript openapi.tmp.json -o src/api/api.d.ts); status=$$?; fi; \
+	rm -f frontend/openapi.tmp.json; \
+	exit $$status

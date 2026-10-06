@@ -3,11 +3,6 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "typecheck": "tsc --noEmit"
-  },
   "dependencies": {
     "@tanstack/react-query": "^5.104.1",
     "@tanstack/react-router": "^1.170.41",
