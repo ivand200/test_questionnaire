@@ -1,9 +1,10 @@
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 
 import { api } from "../api/client";
 
 export function Queue() {
+  const queryClient = useQueryClient();
   const questions = useQuery({
     queryKey: ["questions"],
     queryFn: async () => {
@@ -13,9 +14,25 @@ export function Queue() {
     },
   });
 
+  const runAll = useMutation({
+    mutationFn: async () => {
+      const { data, error } = await api.POST("/api/questionnaire/run");
+      if (error || !data) throw new Error("run all call failed");
+      return data;
+    },
+    onSettled: () => {
+      void queryClient.invalidateQueries({ queryKey: ["questions"] });
+      void queryClient.invalidateQueries({ queryKey: ["question"] });
+    },
+  });
+
   return (
     <section>
       <h1>Queue</h1>
+      <button type="button" disabled={runAll.isPending} onClick={() => runAll.mutate()}>
+        Run all
+      </button>
+      {runAll.isError && <p role="alert">Could not run all questions.</p>}
       {questions.isError && <p>Could not load the questions.</p>}
       {questions.data && (
         <ul>

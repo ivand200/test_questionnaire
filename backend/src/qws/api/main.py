@@ -16,7 +16,7 @@ from qws.config import (
     drafter_config,
     open_store,
 )
-from qws.core.models import LoadIssue, QuestionSummary, QuestionView
+from qws.core.models import LoadIssue, QuestionSummary, QuestionView, RunAllResult
 from qws.services.draft_service import (
     Conflict,
     DraftService,
@@ -89,6 +89,10 @@ def create_app(
         if isinstance(result, Conflict):
             raise HTTPException(409, f"Question {question_id} already has a draft.")
         return result
+
+    @app.post("/api/questionnaire/run")
+    def run_all(request: Request) -> RunAllResult:
+        return RunAllResult(asked=request.app.state.service.run_all())
 
     # Mounted last so every /api/* route above wins over the static files.
     # dist may not exist yet; files are looked up per request, so a build made

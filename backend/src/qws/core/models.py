@@ -165,6 +165,10 @@ class QuestionSummary(BaseModel):
     status: Status
 
 
+class RunAllResult(BaseModel):
+    asked: list[str]
+
+
 class QuestionView(BaseModel):
     id: str
     topic: str
