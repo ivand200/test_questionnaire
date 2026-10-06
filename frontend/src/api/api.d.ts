@@ -241,7 +241,7 @@ export interface components {
              * Status
              * @enum {string}
              */
-            status: "new" | "draft" | "unresolved" | "approved" | "error";
+            status: "new" | "draft" | "unresolved" | "approved" | "needs_review" | "error";
         };
         /** QuestionView */
         QuestionView: {
@@ -255,7 +255,7 @@ export interface components {
              * Status
              * @enum {string}
              */
-            status: "new" | "draft" | "unresolved" | "approved" | "error";
+            status: "new" | "draft" | "unresolved" | "approved" | "needs_review" | "error";
             /** Answer */
             answer: string | null;
             /** Citations */
@@ -305,6 +305,8 @@ export interface components {
             unresolved: number;
             /** Approved */
             approved: number;
+            /** Needs Review */
+            needs_review: number;
             /** Error */
             error: number;
             /** Answered */
@@ -326,7 +328,8 @@ export interface components {
         /**
          * ViewCitation
          * @description A citation as the view shows it. `version` is the cited document's version in the approved
-         *     snapshot; None while the answer is not approved.
+         *     snapshot; None while the answer is not approved. `current_version` is that document's version
+         *     now.
          */
         ViewCitation: {
             /** Passage Id */
@@ -335,6 +338,8 @@ export interface components {
             excerpt: string;
             /** Version */
             version?: number | null;
+            /** Current Version */
+            current_version?: number | null;
         };
         /** Warning */
         Warning: {
@@ -342,7 +347,7 @@ export interface components {
              * Kind
              * @enum {string}
              */
-            kind: "citation_not_found" | "no_citation" | "superseded";
+            kind: "citation_not_found" | "no_citation" | "superseded" | "source_changed";
             /** Passage Id */
             passage_id?: string | null;
             /** Message */
@@ -402,7 +407,7 @@ export interface operations {
     questions_api_questions_get: {
         parameters: {
             query?: {
-                status?: ("new" | "draft" | "unresolved" | "approved" | "error") | null;
+                status?: ("new" | "draft" | "unresolved" | "approved" | "needs_review" | "error") | null;
             };
             header?: never;
             path?: never;

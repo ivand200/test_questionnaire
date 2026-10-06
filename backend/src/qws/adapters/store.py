@@ -82,17 +82,22 @@ class Store:
         with self._connect() as conn:
             rows = conn.execute(
                 "SELECT q.id, q.topic, q.text, d.status AS draft_status,"
-                " a.id IS NOT NULL AS has_approval"
+                " a.source_versions AS snapshot"
                 " FROM question q LEFT JOIN draft d ON d.question_id = q.id"
                 " LEFT JOIN approved_answer a ON a.question_hash = q.question_hash"
                 " ORDER BY q.rowid"
             ).fetchall()
+        documents = self.list_documents()
         found = [
             QuestionSummary(
                 id=r["id"],
                 topic=r["topic"],
                 text=r["text"],
-                status=rules.question_status(bool(r["has_approval"]), r["draft_status"]),
+                status=rules.question_status(
+                    json.loads(r["snapshot"]) if r["snapshot"] is not None else None,
+                    documents,
+                    r["draft_status"],
+                ),
             )
             for r in rows
         ]
@@ -109,14 +114,21 @@ class Store:
             return None
         draft = self.get_draft(question_id)
         approval = self.get_approval(question.question_hash)
-        status = rules.question_status(approval is not None, draft.status if draft else None)
-        citations = approval.citations if approval else draft.citations if draft else []
-        if approval:
-            answer = approval.answer
-        else:
-            answer = (draft.reviewer_answer or draft.model_answer) if draft else None
-        # Computed on every read and never saved.
         documents, passages = self.list_documents(), self.list_passages()
+        snapshot = approval.source_versions if approval else None
+        status = rules.question_status(snapshot, documents, draft.status if draft else None)
+        citations = approval.citations if approval else draft.citations if draft else []
+        reviewer_answer = draft.reviewer_answer if draft else None
+        if approval is None:
+            answer = (reviewer_answer or draft.model_answer) if draft else None
+            edited = bool(reviewer_answer)
+        elif status == "needs_review":
+            # A saved edit shows; it is an edit only when it differs from the approved answer.
+            answer = reviewer_answer or approval.answer
+            edited = answer != approval.answer
+        else:
+            answer, edited = approval.answer, False
+        # Computed on every read and never saved.
         replaced, superseded = rules.superseded_evidence(citations, documents, passages)
         return QuestionView(
             id=question.id,
@@ -124,15 +136,15 @@ class Store:
             text=question.text,
             status=status,
             answer=answer,
-            citations=rules.versioned_citations(
-                citations, approval.source_versions if approval else None, passages
-            ),
-            warnings=([] if approval else draft.warnings if draft else []) + superseded,
+            citations=rules.versioned_citations(citations, snapshot, documents, passages),
+            warnings=([] if approval else draft.warnings if draft else [])
+            + (rules.source_changed_warnings(snapshot, documents) if snapshot else [])
+            + superseded,
             owner=self.get_owner(question.topic),
             replaced=replaced,
             label=draft.label if draft else None,
             error=draft.error if draft and status == "error" else None,
-            edited=status != "approved" and bool(draft and draft.reviewer_answer),
+            edited=edited,
             note=draft.note if draft else None,
             approved=Approval(
                 approver=approval.approver,

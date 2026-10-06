@@ -3,7 +3,9 @@ import hashlib
 from qws.core.models import Citation, DocumentRow, PassageRow, QuestionRow
 from qws.core.rules import (
     SYSTEM_PROMPT,
+    allowed_actions,
     build_prompt,
+    changed_sources,
     question_hash,
     question_status,
     source_versions,
@@ -92,19 +94,46 @@ def test_superseded_evidence_ignores_a_cited_document_that_replaces_nothing():
     assert [w.kind for w in warnings] == ["superseded"]
 
 
+def _documents(export_v2_version: int = 2, export_v1_version: int = 1) -> list[DocumentRow]:
+    return [
+        DocumentRow(id="EXPORT-v1", version=export_v1_version, date="d", status="s", supersedes_id=None),
+        DocumentRow(
+            id="EXPORT-v2", version=export_v2_version, date="d", status="s", supersedes_id="EXPORT-v1"
+        ),
+    ]
+
+
 def test_status_is_approved_over_the_draft_status_else_draft_else_new():
     # spec: 4.1-a, 4.5-a
-    # GIVEN an approved answer, or a draft status, or neither
+    # GIVEN an approved snapshot, or a draft status, or neither
+    documents = _documents()
 
     # WHEN the status is computed
-    approved = question_status(True, "draft")
-    unresolved = question_status(False, "unresolved")
-    new = question_status(False, None)
+    approved = question_status({"EXPORT-v2": 2}, documents, "draft")
+    unresolved = question_status(None, documents, "unresolved")
+    new = question_status(None, documents, None)
 
     # THEN approved wins over the draft status; else the draft status; else new
     assert approved == "approved"
     assert unresolved == "unresolved"
     assert new == "new"
+
+
+def test_a_changed_source_in_the_snapshot_makes_needs_review():
+    # spec: 2.1-a, 2.4-a
+    # GIVEN the snapshot {"EXPORT-v2": 2}
+    snapshot = {"EXPORT-v2": 2}
+
+    # WHEN EXPORT-v2 is at version 3, or only EXPORT-v1 (not in the snapshot) changed
+    changed = _documents(export_v2_version=3)
+    other = _documents(export_v1_version=2)
+
+    # THEN the first is needs_review with (2, 3); the second stays approved and has no change
+    assert question_status(snapshot, changed, "draft") == "needs_review"
+    assert changed_sources(snapshot, changed) == {"EXPORT-v2": (2, 3)}
+    assert question_status(snapshot, other, "draft") == "approved"
+    assert changed_sources(snapshot, other) == {}
+    assert allowed_actions("needs_review") == ["edit", "approve", "leave_open"]
 
 
 def test_source_versions_has_only_cited_documents_never_replaced_ones():
@@ -126,14 +155,21 @@ def test_source_versions_has_only_cited_documents_never_replaced_ones():
 
 
 def test_summary_counts_answered_is_draft_plus_approved():
-    # spec: 5.1-b
-    # GIVEN statuses of 9 questions
+    # spec: 5.1-b, 2.3-a
+    # GIVEN statuses of 9 questions, and one needs_review
     statuses = ["approved"] + ["draft"] * 6 + ["unresolved", "error"]
+    with_review = ["needs_review"] + ["draft"] * 5 + ["approved", "unresolved", "error"]
 
     # WHEN the counts are made
     counts = summary_counts(statuses)
+    review_counts = summary_counts(with_review)
 
-    # THEN each status is counted and answered is 7
+    # THEN each status is counted and answered is 7; needs_review is not in approved or answered
     assert counts.model_dump() == {
-        "new": 0, "draft": 6, "unresolved": 1, "approved": 1, "error": 1, "answered": 7,
+        "new": 0, "draft": 6, "unresolved": 1, "approved": 1, "needs_review": 0, "error": 1,
+        "answered": 7,
+    }
+    assert review_counts.model_dump() == {
+        "new": 0, "draft": 5, "unresolved": 1, "approved": 1, "needs_review": 1, "error": 1,
+        "answered": 6,
     }

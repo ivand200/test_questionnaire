@@ -33,11 +33,46 @@ SYSTEM_PROMPT = (
 )
 
 
-def question_status(has_approval: bool, draft_status: str | None) -> Status:
-    """The one place that sets a question's status: approved, else the draft row status, else new."""
-    if has_approval:
-        return "approved"
+def changed_sources(
+    snapshot: dict[str, int], documents: list[DocumentRow]
+) -> dict[str, tuple[int, int]]:
+    """Documents of the snapshot whose current version is not the approved one: {id: (approved, now)}.
+
+    A document that is not in the snapshot never matters.
+    """
+    version_of = {d.id: d.version for d in documents}
+    return {
+        document_id: (approved, version_of[document_id])
+        for document_id, approved in snapshot.items()
+        if document_id in version_of and version_of[document_id] != approved
+    }
+
+
+def question_status(
+    snapshot: dict[str, int] | None, documents: list[DocumentRow], draft_status: str | None
+) -> Status:
+    """The one place that sets a question's status.
+
+    With an approved snapshot: needs_review when a source changed, else approved. Without one:
+    the draft row status, else new.
+    """
+    if snapshot is not None:
+        return "needs_review" if changed_sources(snapshot, documents) else "approved"
     return cast(Status, draft_status or "new")
+
+
+def source_changed_warnings(
+    snapshot: dict[str, int], documents: list[DocumentRow]
+) -> list[Warning]:
+    """One warning per changed document, with the old and the new version."""
+    return [
+        Warning(
+            kind="source_changed",
+            message=f"{document_id} changed from version {approved} to version {now} "
+            "after this answer was approved.",
+        )
+        for document_id, (approved, now) in changed_sources(snapshot, documents).items()
+    ]
 
 
 _ALLOWED_ACTIONS: dict[Status, list[Action]] = {
@@ -46,6 +81,7 @@ _ALLOWED_ACTIONS: dict[Status, list[Action]] = {
     "unresolved": ["leave_open"],
     "error": ["retry"],
     "approved": ["ask_again"],
+    "needs_review": ["edit", "approve", "leave_open"],
 }
 
 
@@ -73,14 +109,22 @@ def source_versions(
 
 
 def versioned_citations(
-    citations: list[Citation], snapshot: dict[str, int] | None, passages: list[PassageRow]
+    citations: list[Citation],
+    snapshot: dict[str, int] | None,
+    documents: list[DocumentRow],
+    passages: list[PassageRow],
 ) -> list[ViewCitation]:
-    """Each citation with the version of its document from the snapshot; None without a snapshot."""
+    """Each citation with the version of its document in the snapshot and its current version;
+    both None without a snapshot."""
     document_of = {p.id: p.document_id for p in passages}
+    version_of = {d.id: d.version for d in documents}
     return [
         ViewCitation(
             **c.model_dump(),
             version=snapshot.get(document_of.get(c.passage_id, "")) if snapshot else None,
+            current_version=version_of.get(document_of.get(c.passage_id, ""))
+            if snapshot
+            else None,
         )
         for c in citations
     ]

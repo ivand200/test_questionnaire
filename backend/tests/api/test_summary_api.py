@@ -16,10 +16,11 @@ def test_summary_counts_after_run_all(tmp_path):
         # WHEN the client sends GET /api/summary
         response = client.get("/api/summary")
 
-    # THEN the counts are 0 new, 7 draft, 1 unresolved, 0 approved, 1 error, 7 answered
+    # THEN the counts are 0 new, 7 draft, 1 unresolved, 0 approved, 0 needs_review, 1 error, 7 answered
     assert response.status_code == 200
     assert response.json() == {
-        "new": 0, "draft": 7, "unresolved": 1, "approved": 0, "error": 1, "answered": 7,
+        "new": 0, "draft": 7, "unresolved": 1, "approved": 0, "needs_review": 0, "error": 1,
+        "answered": 7,
     }
 
 
@@ -34,7 +35,8 @@ def test_summary_counts_an_approved_question_once_as_approved(tmp_path):
 
     # THEN draft is 6 and approved is 1; answered stays 7
     assert response.json() == {
-        "new": 0, "draft": 6, "unresolved": 1, "approved": 1, "error": 1, "answered": 7,
+        "new": 0, "draft": 6, "unresolved": 1, "approved": 1, "needs_review": 0, "error": 1,
+        "answered": 7,
     }
     assert len(approved_rows(tmp_path)) == 1
 
@@ -70,13 +72,13 @@ def test_filter_draft_returns_seed_order(tmp_path):
 
 
 def test_an_unknown_status_filter_gives_422(tmp_path):
-    # spec: 5.3-a
+    # spec: 2.3-b
     # GIVEN as 5.1-b
     with make_client(tmp_path) as client:
         run_all_then_approve_q1(client)
 
-        # WHEN the client sends GET /api/questions?status=needs_review
-        response = client.get("/api/questions", params={"status": "needs_review"})
+        # WHEN the client sends GET /api/questions?status=bogus
+        response = client.get("/api/questions", params={"status": "bogus"})
 
     # THEN 422
     assert response.status_code == 422

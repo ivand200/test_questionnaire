@@ -67,7 +67,7 @@ class Seed(BaseModel):
 
 # Drafting.
 Verdict = Literal["supported", "not_documented", "conflict"]
-Status = Literal["new", "draft", "unresolved", "approved", "error"]
+Status = Literal["new", "draft", "unresolved", "approved", "needs_review", "error"]
 Action = Literal["generate", "retry", "edit", "approve", "leave_open", "ask_again"]
 Label = Literal["real", "cached", "simulated"]
 
@@ -87,9 +87,11 @@ class Citation(BaseModel):
 
 class ViewCitation(Citation):
     """A citation as the view shows it. `version` is the cited document's version in the approved
-    snapshot; None while the answer is not approved."""
+    snapshot; None while the answer is not approved. `current_version` is that document's version
+    now."""
 
     version: int | None = None
+    current_version: int | None = None
 
 
 class UnknownQuestion:
@@ -97,7 +99,7 @@ class UnknownQuestion:
 
 
 class Warning(BaseModel):
-    kind: Literal["citation_not_found", "no_citation", "superseded"]
+    kind: Literal["citation_not_found", "no_citation", "superseded", "source_changed"]
     passage_id: str | None = None
     message: str
 
@@ -184,8 +186,9 @@ class SummaryCounts(BaseModel):
     draft: int
     unresolved: int
     approved: int
+    needs_review: int
     error: int
-    answered: int  # draft + approved
+    answered: int  # draft + approved; needs_review is not in it
 
 
 class RunAllResult(BaseModel):
