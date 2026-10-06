@@ -9,8 +9,8 @@ from qws.adapters.replay_file import add_entry
 from qws.adapters.simulated_drafter import SimulatedDrafter
 from qws.adapters.store import Store
 from qws.config import REPLAY_PATH, drafter_config, open_store
-from qws.core.models import ReplayEntry
-from qws.services.draft_service import Drafter, DrafterConfig, attempt
+from qws.core.models import ModelCallRow, ReplayEntry
+from qws.services.draft_service import Drafter, DrafterConfig, ask_model
 
 RECORDING_LIST = [f"Q{n}" for n in range(1, 9)]  # Q1 to Q8, asked with the real model
 SIMULATED_LIST = ["Q9"]  # written through SimulatedDrafter; the real model is never asked
@@ -22,43 +22,46 @@ class Recorder:
         self._config = config
 
     def record(self, question_ids: list[str], drafter: Drafter, path: Path) -> list[str]:
-        """Save one model call and one replay entry per question. Returns a message per failure."""
+        """Run `ask_model` for each question; save each model call and one replay entry per call
+        that has a raw reply or is simulated. Returns a message per failure."""
         failures: list[str] = []
         for question_id in question_ids:
             question = self._store.get_question(question_id)
             if question is None:
                 failures.append(f"{question_id}: unknown question.")
                 continue
-            call = attempt(self._store, drafter, self._config, question).call
-            self._store.save_model_call(call)
-            if call.label == "simulated":
-                add_entry(
-                    path,
-                    ReplayEntry(
-                        input_hash=call.input_hash,
-                        label=call.label,
-                        model=call.model,
-                        settings=call.settings,
-                        error=call.error,
-                        recorded_at=call.created_at,
-                    ),
-                )
-                continue
-            if call.error is not None or call.raw_response is None:
-                failures.append(f"{question_id}: {call.error}")
-                continue
-            add_entry(
-                path,
-                ReplayEntry(
-                    input_hash=call.input_hash,
-                    label=call.label,
-                    model=call.model,
-                    settings=call.settings,
-                    raw_response=call.raw_response,
-                    recorded_at=call.created_at,
-                ),
-            )
+            asked = ask_model(self._store, drafter, self._config, question)
+            for call, prefix in ((asked.call, ""), (asked.judge_call, "judge: ")):
+                if call is None:
+                    continue
+                self._store.save_model_call(call)
+                failure = self._write_entry(path, call)
+                if failure is not None:
+                    failures.append(f"{question_id}: {prefix}{failure}")
         return failures
+
+    @staticmethod
+    def _write_entry(path: Path, call: ModelCallRow) -> str | None:
+        """Write the entry of one call; return its error text when it gets no entry."""
+        if call.label == "simulated":
+            raw_response, error = call.raw_response, call.error
+        elif call.error is not None or call.raw_response is None:
+            return call.error
+        else:
+            raw_response, error = call.raw_response, None
+        add_entry(
+            path,
+            ReplayEntry(
+                input_hash=call.input_hash,
+                label=call.label,
+                model=call.model,
+                settings=call.settings,
+                raw_response=raw_response,
+                error=error,
+                recorded_at=call.created_at,
+            ),
+        )
+        return None
 
 
 def main() -> int:
