@@ -340,6 +340,11 @@ export interface components {
             version?: number | null;
             /** Current Version */
             current_version?: number | null;
+            /**
+             * Source Changed
+             * @default false
+             */
+            source_changed: boolean;
         };
         /** Warning */
         Warning: {
@@ -352,6 +357,12 @@ export interface components {
             passage_id?: string | null;
             /** Message */
             message: string;
+            /** Document Id */
+            document_id?: string | null;
+            /** Old Version */
+            old_version?: number | null;
+            /** New Version */
+            new_version?: number | null;
         };
     };
     responses: never;

@@ -68,6 +68,9 @@ def source_changed_warnings(
     return [
         Warning(
             kind="source_changed",
+            document_id=document_id,
+            old_version=approved,
+            new_version=now,
             message=f"{document_id} changed from version {approved} to version {now} "
             "after this answer was approved.",
         )
@@ -118,6 +121,7 @@ def versioned_citations(
     both None without a snapshot."""
     document_of = {p.id: p.document_id for p in passages}
     version_of = {d.id: d.version for d in documents}
+    changed = changed_sources(snapshot, documents) if snapshot else {}
     return [
         ViewCitation(
             **c.model_dump(),
@@ -125,6 +129,7 @@ def versioned_citations(
             current_version=version_of.get(document_of.get(c.passage_id, ""))
             if snapshot
             else None,
+            source_changed=document_of.get(c.passage_id, "") in changed,
         )
         for c in citations
     ]

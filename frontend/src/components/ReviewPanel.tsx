@@ -149,11 +149,9 @@ export function ReviewPanel({ questionId }: { questionId: string }) {
               <li key={c.passage_id}>
                 <strong>{c.passage_id}</strong>
                 {c.version != null && <> (version {c.version})</>}
-                {c.version != null &&
-                  c.current_version != null &&
-                  c.current_version !== c.version && (
-                    <> approved on v{c.version}, now v{c.current_version}</>
-                  )}
+                {c.source_changed && (
+                  <> approved on v{c.version}, now v{c.current_version}</>
+                )}
                 <blockquote>{c.excerpt}</blockquote>
               </li>
             ))}

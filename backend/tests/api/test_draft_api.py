@@ -76,7 +76,7 @@ def test_asking_for_q3_saves_a_draft_with_the_exact_passage_as_excerpt(tmp_path)
         assert body["status"] == "draft"
         assert body["answer"] == "Monday to Friday, 09:00–17:00 UTC"
         assert body["citations"] == [
-        {"passage_id": "SUPPORT-v1:p1", "excerpt": SUPPORT_EXCERPT, "version": None, "current_version": None}
+        {"passage_id": "SUPPORT-v1:p1", "excerpt": SUPPORT_EXCERPT, "version": None, "current_version": None, "source_changed": False}
     ]
         # spec: 5.1-b
         statuses = {q["id"]: q["status"] for q in client.get("/api/questions").json()}
@@ -422,7 +422,7 @@ def test_get_question_returns_the_draft_view_with_allowed_actions(tmp_path):
     body = response.json()
     assert body["answer"] == "Monday to Friday, 09:00–17:00 UTC"
     assert body["citations"] == [
-        {"passage_id": "SUPPORT-v1:p1", "excerpt": SUPPORT_EXCERPT, "version": None, "current_version": None}
+        {"passage_id": "SUPPORT-v1:p1", "excerpt": SUPPORT_EXCERPT, "version": None, "current_version": None, "source_changed": False}
     ]
     assert body["warnings"] == []
     assert body["allowed_actions"] == ["edit", "approve", "leave_open"]

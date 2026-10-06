@@ -92,6 +92,8 @@ class ViewCitation(Citation):
 
     version: int | None = None
     current_version: int | None = None
+    # True when the document changed after approval; the Backend decides, the Frontend only draws.
+    source_changed: bool = False
 
 
 class UnknownQuestion:
@@ -102,6 +104,10 @@ class Warning(BaseModel):
     kind: Literal["citation_not_found", "no_citation", "superseded", "source_changed"]
     passage_id: str | None = None
     message: str
+    # Set for `source_changed`: the document and its approved and current versions.
+    document_id: str | None = None
+    old_version: int | None = None
+    new_version: int | None = None
 
 
 class ReplacedEvidence(BaseModel):

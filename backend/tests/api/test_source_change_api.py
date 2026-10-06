@@ -42,7 +42,12 @@ def test_a_bumped_source_makes_the_approved_answer_needs_review(tmp_path):
     ]
     [warning] = [w for w in body["warnings"] if w["kind"] == "source_changed"]
     assert "EXPORT-v2" in warning["message"]
-    assert "2" in warning["message"] and "3" in warning["message"]
+    assert (warning["document_id"], warning["old_version"], warning["new_version"]) == (
+        "EXPORT-v2",
+        2,
+        3,
+    )
+    assert [c["source_changed"] for c in body["citations"]] == [True]
     assert [r["passage_id"] for r in body["replaced"]] == ["EXPORT-v1:p1"]
     assert body["allowed_actions"] == ["edit", "approve", "leave_open"]
     assert approved_rows(tmp_path) == row_before
@@ -211,6 +216,7 @@ def test_approving_again_replaces_the_approved_answer_with_the_new_versions(tmp_
     assert [(c["passage_id"], c["version"], c["current_version"]) for c in body["citations"]] == [
         ("EXPORT-v2:p1", 3, 3)
     ]
+    assert [c["source_changed"] for c in body["citations"]] == [False]
     assert [w for w in body["warnings"] if w["kind"] == "source_changed"] == []
     assert len(approved_rows(tmp_path)) == 1
     assert draft_row(tmp_path, "Q1") is not None
