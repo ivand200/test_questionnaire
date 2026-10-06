@@ -37,8 +37,8 @@ def test_replay_gives_the_q3_draft_from_the_committed_file_with_no_key(tmp_path)
     ).fetchall()
     conn.close()
     assert draft_call == ("cached", None, None, None)
-    # until `make record` saves judge replies (ticket 3) the judge call has no entry and is saved
-    assert judge_call[3] == "No saved response for this input."
+    # the committed file holds the judge reply too
+    assert judge_call == ("cached", None, None, None)
 
 
 def test_replay_with_no_entry_gives_error_and_no_exception(tmp_path, monkeypatch):
