@@ -74,6 +74,24 @@ export function ReviewPanel({ questionId }: { questionId: string }) {
     },
   });
 
+  const [noteText, setNoteText] = useState("");
+
+  const leaveOpen = useMutation({
+    mutationFn: async (note: string) => {
+      const { data, error } = await api.POST("/api/questions/{question_id}/leave-open", {
+        params: { path: { question_id: questionId } },
+        body: { note },
+      });
+      if (error || !data) throw new Error(refusal(error, "Could not leave the question open."));
+      return data;
+    },
+    onSuccess: (data) => {
+      queryClient.setQueryData(queryKey, data);
+      void queryClient.invalidateQueries({ queryKey: ["questions"] });
+      setNoteText("");
+    },
+  });
+
   if (question.isError) return <section>Could not load the question.</section>;
   if (!question.data) return <section>Loading...</section>;
   const q = question.data;
@@ -81,6 +99,7 @@ export function ReviewPanel({ questionId }: { questionId: string }) {
   const canAsk = q.allowed_actions.includes("generate") || q.allowed_actions.includes("retry");
   const canApprove = q.allowed_actions.includes("approve");
   const canEdit = q.allowed_actions.includes("edit");
+  const canLeaveOpen = q.allowed_actions.includes("leave_open");
   const canAskAgain = q.allowed_actions.includes("ask_again");
 
   return (
@@ -108,6 +127,7 @@ export function ReviewPanel({ questionId }: { questionId: string }) {
       {q.error && <p role="alert">{q.error}</p>}
       {generate.isError && <p role="alert">{generate.error.message}</p>}
       {approve.isError && <p role="alert">{approve.error.message}</p>}
+      {leaveOpen.isError && <p role="alert">{leaveOpen.error.message}</p>}
       {saveEdit.isError && <p role="alert">{saveEdit.error.message}</p>}
       {q.warnings.length > 0 && (
         <ul>
@@ -177,6 +197,23 @@ export function ReviewPanel({ questionId }: { questionId: string }) {
         <button type="button" disabled={approve.isPending} onClick={() => approve.mutate()}>
           Approve
         </button>
+      )}
+      {canLeaveOpen && (
+        <div>
+          <textarea
+            aria-label="Note"
+            rows={3}
+            value={noteText}
+            onChange={(e) => setNoteText(e.target.value)}
+          />
+          <button
+            type="button"
+            disabled={leaveOpen.isPending || noteText.trim() === ""}
+            onClick={() => leaveOpen.mutate(noteText)}
+          >
+            Leave open + note
+          </button>
+        </div>
       )}
       {canAsk && (
         <button type="button" disabled={generate.isPending} onClick={() => generate.mutate()}>

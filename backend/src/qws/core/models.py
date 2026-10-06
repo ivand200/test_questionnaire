@@ -217,6 +217,10 @@ class ApproveRequest(BaseModel):
     approver: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
 
 
+class LeaveOpenRequest(BaseModel):
+    note: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
+
+
 class ReplayEntry(BaseModel):
     """One saved reply in replay/responses.json, found by input hash.
 

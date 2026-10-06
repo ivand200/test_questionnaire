@@ -66,6 +66,21 @@ class ReviewService:
         assert updated is not None
         return updated
 
+    def leave_open(
+        self, question_id: str, note: str
+    ) -> QuestionView | NotAllowed | UnknownQuestion:
+        """Save a note; a draft becomes unresolved, an unresolved question keeps its status."""
+        view = self._store.get_question_view(question_id)
+        if view is None:
+            return UnknownQuestion()
+        refused = self._refuse_unless_allowed(view, "leave_open")
+        if refused:
+            return refused
+        self._store.save_note(question_id, note)
+        updated = self._store.get_question_view(question_id)
+        assert updated is not None
+        return updated
+
     @staticmethod
     def _refuse_unless_allowed(view: QuestionView, action: Action) -> NotAllowed | None:
         if action in view.allowed_actions:
