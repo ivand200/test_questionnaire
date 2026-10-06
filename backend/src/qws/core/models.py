@@ -63,3 +63,99 @@ class Seed(BaseModel):
     passages: list[SeedPassage] = Field(default_factory=list)
     questions: list[SeedQuestion]
     owners: dict[str, str]
+
+
+# Drafting.
+Verdict = Literal["supported", "not_documented", "conflict"]
+Status = Literal["new", "draft", "unresolved", "error"]
+Label = Literal["real", "cached", "simulated"]
+
+
+class Reply(BaseModel):
+    """What the model answers. Code sets the status, never the model."""
+
+    answer: str
+    verdict: Verdict
+    citations: list[str]
+
+
+class Citation(BaseModel):
+    passage_id: str
+    excerpt: str
+
+
+class Warning(BaseModel):
+    kind: Literal["citation_not_found", "no_citation"]
+    passage_id: str | None = None
+    message: str
+
+
+class Prompt(BaseModel):
+    """Instructions (system) and data (user) stay in separate parts."""
+
+    system: str
+    user: str
+    model: str
+    settings: dict[str, int | float | str]
+    passage_ids: list[str]
+    input_hash: str
+
+
+class Checked(BaseModel):
+    status: Literal["draft", "unresolved"]
+    verdict: Verdict
+    answer: str
+    citations: list[Citation]
+    warnings: list[Warning]
+
+
+class DrafterReply(BaseModel):
+    """What a Drafter gives back. Exactly one of raw_reply and error is set."""
+
+    raw_reply: str | None = None
+    error: str | None = None
+    label: Label
+    model: str
+    settings: dict[str, int | float | str]
+    latency_ms: int | None = None
+    input_tokens: int | None = None
+    output_tokens: int | None = None
+
+
+class ModelCallRow(BaseModel):
+    question_id: str
+    input_hash: str
+    prompt: str  # JSON of the system and user parts
+    model: str
+    settings: dict[str, int | float | str]
+    raw_response: str | None
+    error: str | None
+    label: Label
+    created_at: str
+    latency_ms: int | None
+    input_tokens: int | None
+    output_tokens: int | None
+
+
+class DraftRow(BaseModel):
+    question_id: str
+    status: Literal["draft", "unresolved", "error"]
+    verdict: Verdict | None
+    model_answer: str | None
+    citations: list[Citation]
+    warnings: list[Warning]
+    model_call_id: int | None
+    updated_at: str
+    error: str | None = None  # read from the model call; never written here
+
+
+class QuestionView(BaseModel):
+    id: str
+    topic: str
+    text: str
+    status: Status
+    answer: str | None
+    citations: list[Citation]
+    warnings: list[Warning]
+    error: str | None
+    allowed_actions: list[Literal["generate", "retry"]]

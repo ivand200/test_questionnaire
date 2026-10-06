@@ -5,6 +5,7 @@ description = "Questionnaire evidence and review workspace"
 requires-python = ">=3.12"
 dependencies = [
     "fastapi>=0.115",
+    "pydantic-ai-slim[openai]==2.54.0",
     "uvicorn[standard]>=0.30",
 ]
 

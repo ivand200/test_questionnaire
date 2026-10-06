@@ -5,18 +5,29 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Literal
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
+from qws.adapters.real_drafter import RealDrafter
+from qws.adapters.replay_drafter import ReplayDrafter
 from qws.adapters.store import Store
-from qws.core.models import LoadIssue
+from qws.core import rules
+from qws.core.models import LoadIssue, QuestionView
 from qws.services import seed_loader
+from qws.services.draft_service import (
+    Conflict,
+    DraftService,
+    Drafter,
+    DrafterConfig,
+    UnknownQuestion,
+)
 
 REPO_DIR = Path(__file__).resolve().parents[4]
 DIST_DIR = REPO_DIR / "frontend" / "dist"
 SEED_PATH = REPO_DIR / "data" / "seed.json"
 DEFAULT_DB_PATH = "qws.db"
+MODEL_SETTINGS: dict[str, int | float | str] = {"temperature": 0, "max_tokens": 1000}
 
 
 class QuestionSummary(BaseModel):
@@ -33,10 +44,18 @@ class LazyStaticFiles(StaticFiles):
         pass
 
 
+def drafter_from_env(config: DrafterConfig) -> Drafter:
+    """`MODEL_MODE=real` asks the model; anything else (empty too) is replay."""
+    if os.environ.get("MODEL_MODE") == "real":
+        return RealDrafter(config.model, os.environ.get("OPENAI_API_KEY", ""), config.settings)
+    return ReplayDrafter(config.model, config.settings)
+
+
 def create_app(
     dist_dir: Path = DIST_DIR,
     db_path: Path | str | None = None,
     seed_path: Path = SEED_PATH,
+    drafter: Drafter | None = None,
 ) -> FastAPI:
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
@@ -44,6 +63,8 @@ def create_app(
         store.init_schema()
         app.state.store = store
         app.state.load_issues = seed_loader.load(json.loads(seed_path.read_text()), store)
+        config = DrafterConfig(os.environ.get("MODEL_NAME", ""), MODEL_SETTINGS)
+        app.state.service = DraftService(store, drafter or drafter_from_env(config), config)
         yield
 
     app = FastAPI(lifespan=lifespan)
@@ -59,6 +80,23 @@ def create_app(
     @app.get("/api/questions")
     def questions(request: Request) -> list[QuestionSummary]:
         return [QuestionSummary(**q) for q in request.app.state.store.list_questions()]
+
+    @app.get("/api/questions/{question_id}")
+    def question(question_id: str, request: Request) -> QuestionView:
+        store: Store = request.app.state.store
+        found = store.get_question(question_id)
+        if found is None:
+            raise HTTPException(404, f"Unknown question {question_id}.")
+        return rules.question_view(found, store.get_draft(question_id))
+
+    @app.post("/api/questions/{question_id}/draft")
+    def draft(question_id: str, request: Request) -> QuestionView:
+        result = request.app.state.service.ask(question_id)
+        if isinstance(result, UnknownQuestion):
+            raise HTTPException(404, f"Unknown question {question_id}.")
+        if isinstance(result, Conflict):
+            raise HTTPException(409, f"Question {question_id} already has a draft.")
+        return result
 
     # Mounted last so every /api/* route above wins over the static files.
     # dist may not exist yet; files are looked up per request, so a build made
