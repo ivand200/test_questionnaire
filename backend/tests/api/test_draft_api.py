@@ -463,3 +463,127 @@ def test_an_unknown_question_gives_404_on_get_and_post(tmp_path):
     # THEN HTTP 404
     assert got.status_code == 404
     assert posted.status_code == 404
+
+
+Q1_REPLY = reply_json(answer="No, paid plans only.", citations=["EXPORT-v2:p1"])
+
+
+def test_a_draft_citing_a_replacing_document_returns_the_replaced_evidence_and_a_warning(tmp_path):
+    # spec: 1.1-a
+    # GIVEN the real Seed; the Drafter replies for Q1 supported, citing EXPORT-v2:p1
+    with make_client(tmp_path, FakeDrafter(ok(Q1_REPLY))) as client:
+        client.post("/api/questions/Q1/draft")
+
+        # WHEN the client sends GET /api/questions/Q1
+        body = client.get("/api/questions/Q1").json()
+
+    # THEN status draft; one citation; EXPORT-v1:p1 as replaced evidence; one superseded warning
+    assert body["status"] == "draft"
+    assert [c["passage_id"] for c in body["citations"]] == ["EXPORT-v2:p1"]
+    assert body["replaced"] == [
+        {
+            "passage_id": "EXPORT-v1:p1",
+            "excerpt": "CSV exports are available on every plan.",
+            "replaced_by": "EXPORT-v2",
+        }
+    ]
+    [warning] = body["warnings"]
+    assert warning["kind"] == "superseded"
+    assert warning["message"] == "EXPORT-v1 is replaced by EXPORT-v2. The answer uses EXPORT-v2."
+
+
+def test_the_replaced_passage_is_not_in_the_saved_prompt_nor_stored_and_reads_agree(tmp_path):
+    # spec: 1.1-b, 1.2-a
+    # GIVEN as 1.1-a
+    drafter = FakeDrafter(ok(Q1_REPLY))
+    with make_client(tmp_path, drafter) as client:
+        client.post("/api/questions/Q1/draft")
+
+        # WHEN the client reads Q1 twice
+        first = client.get("/api/questions/Q1").json()
+        second = client.get("/api/questions/Q1").json()
+
+    # THEN the saved prompt has no EXPORT-v1:p1; the saved draft has no superseded warning;
+    # both reads give the same body
+    [call] = db_rows(tmp_path, "model_call")
+    assert "EXPORT-v1:p1" not in call["prompt"]
+    [draft] = db_rows(tmp_path, "draft")
+    assert "superseded" not in draft["warnings"]
+    assert "CSV exports are available on every plan." not in json.dumps(draft)
+    assert first == second
+
+
+def test_a_draft_that_cites_no_replacing_document_has_no_replaced_evidence(tmp_path):
+    # spec: 1.3-a
+    # GIVEN Q3 has a draft that cites SUPPORT-v1:p1
+    with make_client(tmp_path, FakeDrafter(ok())) as client:
+        client.post("/api/questions/Q3/draft")
+
+        # WHEN the client sends GET /api/questions/Q3
+        body = client.get("/api/questions/Q3").json()
+
+    # THEN replaced evidence is empty; no superseded warning
+    assert body["replaced"] == []
+    assert body["warnings"] == []
+
+
+def test_a_citation_of_a_replaced_passage_that_was_not_sent_gives_no_replaced_evidence(tmp_path):
+    # spec: 1.3-b
+    # GIVEN the Drafter replies for Q1 supported, citing EXPORT-v1:p1, which was not sent
+    raw = reply_json(citations=["EXPORT-v1:p1"])
+    with make_client(tmp_path, FakeDrafter(ok(raw))) as client:
+        client.post("/api/questions/Q1/draft")
+
+        # WHEN the client sends GET /api/questions/Q1
+        body = client.get("/api/questions/Q1").json()
+
+    # THEN unresolved; citation_not_found for EXPORT-v1:p1; no replaced evidence; no superseded
+    assert body["status"] == "unresolved"
+    assert [(w["kind"], w["passage_id"]) for w in body["warnings"]] == [
+        ("citation_not_found", "EXPORT-v1:p1")
+    ]
+    assert body["replaced"] == []
+
+
+def test_q2_not_documented_is_unresolved_with_the_product_reviewer_as_owner(tmp_path):
+    # spec: 2.1-a
+    # GIVEN the Drafter replies for Q2 not_documented, no citation
+    raw = reply_json(
+        "not_documented", "The documents do not say whether JSON export is available.", []
+    )
+    with make_client(tmp_path, FakeDrafter(ok(raw))) as client:
+        client.post("/api/questions/Q2/draft")
+
+        # WHEN the client sends GET /api/questions/Q2
+        body = client.get("/api/questions/Q2").json()
+
+    # THEN unresolved; owner Product reviewer; no citations; no warnings; no allowed actions
+    assert body["status"] == "unresolved"
+    assert body["owner"] == "Product reviewer"
+    assert body["citations"] == []
+    assert body["warnings"] == []
+    assert body["allowed_actions"] == []
+
+
+def test_the_owner_of_a_new_question_comes_from_its_topic(tmp_path):
+    # spec: 2.1-b
+    # GIVEN the real Seed; Q3 is new
+    with make_client(tmp_path) as client:
+        # WHEN the client sends GET /api/questions/Q3
+        body = client.get("/api/questions/Q3").json()
+
+    # THEN owner is Support reviewer
+    assert body["owner"] == "Support reviewer"
+
+
+def test_a_question_with_a_topic_that_has_no_owner_returns_owner_null(tmp_path):
+    # spec: 2.1-c
+    # GIVEN a Seed with a question of topic legal and no owner legal
+    seed = copy.deepcopy(REAL_SEED)
+    seed["questions"].append({"id": "Q99", "topic": "legal", "text": "Is there a DPA?"})
+    with make_client(tmp_path, seed=seed) as client:
+        # WHEN the client reads that question
+        body = client.get("/api/questions/Q99").json()
+
+    # THEN owner is null
+    assert body["owner"] is None

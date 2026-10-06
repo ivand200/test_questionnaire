@@ -49,6 +49,9 @@ export function ReviewPanel({ questionId }: { questionId: string }) {
           <p>{q.answer}</p>
         </>
       )}
+      {q.status === "unresolved" && (
+        <p>Review route: {q.owner ?? "No owner mapped"}</p>
+      )}
       {q.error && <p role="alert">{q.error}</p>}
       {generate.isError && <p role="alert">Could not ask for a draft.</p>}
       {q.warnings.length > 0 && (
@@ -66,6 +69,21 @@ export function ReviewPanel({ questionId }: { questionId: string }) {
               <li key={c.passage_id}>
                 <strong>{c.passage_id}</strong>
                 <blockquote>{c.excerpt}</blockquote>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+      {q.replaced.length > 0 && (
+        <>
+          <h3>Replaced</h3>
+          <ul>
+            {q.replaced.map((r) => (
+              <li key={r.passage_id}>
+                <strong>{r.passage_id}</strong> (replaced by {r.replaced_by})
+                <blockquote>
+                  <del>{r.excerpt}</del>
+                </blockquote>
               </li>
             ))}
           </ul>

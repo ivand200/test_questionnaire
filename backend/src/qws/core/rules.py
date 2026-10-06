@@ -10,6 +10,7 @@ from qws.core.models import (
     PassageRow,
     Prompt,
     QuestionRow,
+    ReplacedEvidence,
     Reply,
     Warning,
 )
@@ -115,3 +116,37 @@ def check_reply(reply: Reply, passages: list[PassageRow]) -> Checked:
         warnings=warnings,
     )
 
+
+
+def superseded_evidence(
+    citations: list[Citation], documents: list[DocumentRow], passages: list[PassageRow]
+) -> tuple[list[ReplacedEvidence], list[Warning]]:
+    """Passages of the documents that the cited documents replace, with one warning per document.
+
+    Only valid citations count. A cited document with no `supersedes` adds nothing.
+    """
+    document_of = {p.id: p.document_id for p in passages}
+    supersedes = {d.id: d.supersedes_id for d in documents}
+    replaced: list[ReplacedEvidence] = []
+    warnings: list[Warning] = []
+    seen: set[str] = set()
+    for citation in citations:
+        cited_document = document_of.get(citation.passage_id)
+        old_document = supersedes.get(cited_document) if cited_document else None
+        if cited_document is None or old_document is None or old_document in seen:
+            continue
+        seen.add(old_document)
+        replaced.extend(
+            ReplacedEvidence(passage_id=p.id, excerpt=p.text, replaced_by=cited_document)
+            for p in passages
+            if p.document_id == old_document
+        )
+        warnings.append(
+            Warning(
+                kind="superseded",
+                passage_id=None,
+                message=f"{old_document} is replaced by {cited_document}. "
+                f"The answer uses {cited_document}.",
+            )
+        )
+    return replaced, warnings

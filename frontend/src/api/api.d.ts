@@ -150,10 +150,26 @@ export interface components {
             citations: components["schemas"]["Citation"][];
             /** Warnings */
             warnings: components["schemas"]["Warning"][];
+            /** Owner */
+            owner: string | null;
+            /** Replaced */
+            replaced: components["schemas"]["ReplacedEvidence"][];
             /** Error */
             error: string | null;
             /** Allowed Actions */
             allowed_actions: ("generate" | "retry")[];
+        };
+        /**
+         * ReplacedEvidence
+         * @description A passage of a document that a cited document replaces. Shown, never sent to the model.
+         */
+        ReplacedEvidence: {
+            /** Passage Id */
+            passage_id: string;
+            /** Excerpt */
+            excerpt: string;
+            /** Replaced By */
+            replaced_by: string;
         };
         /** ValidationError */
         ValidationError: {
@@ -174,7 +190,7 @@ export interface components {
              * Kind
              * @enum {string}
              */
-            kind: "citation_not_found" | "no_citation";
+            kind: "citation_not_found" | "no_citation" | "superseded";
             /** Passage Id */
             passage_id?: string | null;
             /** Message */

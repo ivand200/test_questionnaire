@@ -85,9 +85,17 @@ class Citation(BaseModel):
 
 
 class Warning(BaseModel):
-    kind: Literal["citation_not_found", "no_citation"]
+    kind: Literal["citation_not_found", "no_citation", "superseded"]
     passage_id: str | None = None
     message: str
+
+
+class ReplacedEvidence(BaseModel):
+    """A passage of a document that a cited document replaces. Shown, never sent to the model."""
+
+    passage_id: str
+    excerpt: str
+    replaced_by: str  # ID of the cited document that replaces it
 
 
 class Prompt(BaseModel):
@@ -164,6 +172,8 @@ class QuestionView(BaseModel):
     answer: str | None
     citations: list[Citation]
     warnings: list[Warning]
+    owner: str | None
+    replaced: list[ReplacedEvidence]
     error: str | None
     allowed_actions: list[Literal["generate", "retry"]]
 

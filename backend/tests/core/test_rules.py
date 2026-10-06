@@ -1,7 +1,7 @@
 import hashlib
 
-from qws.core.models import PassageRow, QuestionRow
-from qws.core.rules import SYSTEM_PROMPT, build_prompt, question_hash
+from qws.core.models import Citation, DocumentRow, PassageRow, QuestionRow
+from qws.core.rules import SYSTEM_PROMPT, build_prompt, question_hash, superseded_evidence
 
 
 def test_question_hash_is_sha256_of_topic_and_normalized_text():
@@ -61,3 +61,24 @@ def test_the_input_hash_depends_on_model_settings_question_and_passage_order():
     assert build_prompt(question, [b, a], "m", {"temperature": 0}).input_hash != base
     assert build_prompt(question, [a, b], "m2", {"temperature": 0}).input_hash != base
     assert build_prompt(question, [a, b], "m", {"temperature": 1}).input_hash != base
+
+
+def test_superseded_evidence_ignores_a_cited_document_that_replaces_nothing():
+    # spec: 1.3-a (lower interface: the pure rule)
+    # GIVEN B replaces A; the citation is a passage of C, which replaces nothing
+    documents = [
+        DocumentRow(id="A", version=1, date="d", status="s", supersedes_id=None),
+        DocumentRow(id="B", version=2, date="d", status="s", supersedes_id="A"),
+        DocumentRow(id="C", version=1, date="d", status="s", supersedes_id=None),
+    ]
+    passages = [_passage("A:p1"), _passage("B:p1"), _passage("C:p1")]
+
+    # WHEN the rule runs
+    cited_c = superseded_evidence([Citation(passage_id="C:p1", excerpt="t")], documents, passages)
+    cited_b = superseded_evidence([Citation(passage_id="B:p1", excerpt="t")], documents, passages)
+
+    # THEN C gives nothing; B gives the passages of A and one warning
+    assert cited_c == ([], [])
+    replaced, warnings = cited_b
+    assert [(r.passage_id, r.replaced_by) for r in replaced] == [("A:p1", "B")]
+    assert [w.kind for w in warnings] == ["superseded"]

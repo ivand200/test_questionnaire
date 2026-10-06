@@ -5,6 +5,7 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Literal, cast
 
+from qws.core import rules
 from qws.core.models import (
     DocumentRow,
     DraftRow,
@@ -104,17 +105,30 @@ class Store:
             return None
         draft = self.get_draft(question_id)
         status = _status(draft.status if draft else None)
+        citations = draft.citations if draft else []
+        # Computed on every read and never saved.
+        replaced, superseded = rules.superseded_evidence(
+            citations, self.list_documents(), self.list_passages()
+        )
         return QuestionView(
             id=question.id,
             topic=question.topic,
             text=question.text,
             status=status,
             answer=draft.model_answer if draft else None,
-            citations=draft.citations if draft else [],
-            warnings=draft.warnings if draft else [],
+            citations=citations,
+            warnings=(draft.warnings if draft else []) + superseded,
+            owner=self.get_owner(question.topic),
+            replaced=replaced,
             error=draft.error if draft and status == "error" else None,
             allowed_actions=_allowed_actions(status),
         )
+
+    def get_owner(self, topic: str) -> str | None:
+        """The reviewer of a topic from the owner table; None when the topic has no row."""
+        with self._connect() as conn:
+            row = conn.execute("SELECT reviewer FROM owner WHERE topic = ?", (topic,)).fetchone()
+        return row["reviewer"] if row else None
 
     def get_question(self, question_id: str) -> QuestionRow | None:
         with self._connect() as conn:
