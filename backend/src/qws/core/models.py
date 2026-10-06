@@ -172,6 +172,25 @@ class RunAllResult(BaseModel):
     asked: list[str]
 
 
+class ApprovedRow(BaseModel):
+    """An approved answer: final wording, saved excerpts and the cited document versions."""
+
+    question_hash: str
+    question_text: str
+    topic: str
+    answer: str
+    citations: list[Citation]
+    source_versions: dict[str, int]
+    approver: str
+    approved_at: str
+
+
+class Approval(BaseModel):
+    approver: str
+    approved_at: str
+    source_versions: dict[str, int]
+
+
 class QuestionView(BaseModel):
     id: str
     topic: str
@@ -186,11 +205,16 @@ class QuestionView(BaseModel):
     error: str | None
     edited: bool
     note: str | None
+    approved: Approval | None = None
     allowed_actions: list[Action]
 
 
 class EditRequest(BaseModel):
     answer: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
+
+
+class ApproveRequest(BaseModel):
+    approver: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
 
 
 class ReplayEntry(BaseModel):

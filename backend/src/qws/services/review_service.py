@@ -1,7 +1,9 @@
 from dataclasses import dataclass
+from datetime import UTC, datetime
 
 from qws.adapters.store import Store
-from qws.core.models import Action, QuestionView
+from qws.core import rules
+from qws.core.models import Action, ApprovedRow, QuestionView
 from qws.services.draft_service import UnknownQuestion
 
 
@@ -27,6 +29,39 @@ class ReviewService:
         if refused:
             return refused
         self._store.save_edit(question_id, answer)
+        updated = self._store.get_question_view(question_id)
+        assert updated is not None
+        return updated
+
+    def approve(
+        self, question_id: str, approver: str
+    ) -> QuestionView | NotAllowed | UnknownQuestion:
+        """Save the approved answer of a draft that has a citation. Approving twice changes nothing."""
+        view = self._store.get_question_view(question_id)
+        question = self._store.get_question(question_id)
+        if view is None or question is None:
+            return UnknownQuestion()
+        if view.status == "approved":
+            return view
+        refused = self._refuse_unless_allowed(view, "approve")
+        if refused:
+            return refused
+        if not view.citations:
+            return NotAllowed(f"Question {view.id} has no citation: cannot approve.")
+        self._store.save_approval(
+            ApprovedRow(
+                question_hash=question.question_hash,
+                question_text=question.text,
+                topic=question.topic,
+                answer=view.answer or "",
+                citations=view.citations,
+                source_versions=rules.source_versions(
+                    view.citations, self._store.list_documents(), self._store.list_passages()
+                ),
+                approver=approver,
+                approved_at=datetime.now(UTC).isoformat(),
+            )
+        )
         updated = self._store.get_question_view(question_id)
         assert updated is not None
         return updated

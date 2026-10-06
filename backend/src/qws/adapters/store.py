@@ -6,6 +6,9 @@ from pathlib import Path
 
 from qws.core import rules
 from qws.core.models import (
+    Approval,
+    ApprovedRow,
+    Citation,
     DocumentRow,
     DraftRow,
     ModelCallRow,
@@ -76,13 +79,15 @@ class Store:
         """Every question in Seed order with its status."""
         with self._connect() as conn:
             rows = conn.execute(
-                "SELECT q.id, q.topic, q.text, d.status AS draft_status"
+                "SELECT q.id, q.topic, q.text, d.status AS draft_status,"
+                " a.id IS NOT NULL AS has_approval"
                 " FROM question q LEFT JOIN draft d ON d.question_id = q.id"
+                " LEFT JOIN approved_answer a ON a.question_hash = q.question_hash"
                 " ORDER BY q.rowid"
             ).fetchall()
         return [
             QuestionSummary(
-                id=r["id"], topic=r["topic"], text=r["text"], status=rules.question_status(False, r["draft_status"])
+                id=r["id"], topic=r["topic"], text=r["text"], status=rules.question_status(bool(r["has_approval"]), r["draft_status"]),
             )
             for r in rows
         ]
@@ -93,8 +98,13 @@ class Store:
         if question is None:
             return None
         draft = self.get_draft(question_id)
-        status = rules.question_status(False, draft.status if draft else None)
-        citations = draft.citations if draft else []
+        approval = self.get_approval(question.question_hash)
+        status = rules.question_status(approval is not None, draft.status if draft else None)
+        citations = approval.citations if approval else draft.citations if draft else []
+        if approval:
+            answer = approval.answer
+        else:
+            answer = (draft.reviewer_answer or draft.model_answer) if draft else None
         # Computed on every read and never saved.
         replaced, superseded = rules.superseded_evidence(
             citations, self.list_documents(), self.list_passages()
@@ -104,15 +114,22 @@ class Store:
             topic=question.topic,
             text=question.text,
             status=status,
-            answer=(draft.reviewer_answer or draft.model_answer) if draft else None,
+            answer=answer,
             citations=citations,
-            warnings=(draft.warnings if draft else []) + superseded,
+            warnings=([] if approval else draft.warnings if draft else []) + superseded,
             owner=self.get_owner(question.topic),
             replaced=replaced,
             label=draft.label if draft else None,
             error=draft.error if draft and status == "error" else None,
-            edited=bool(draft and draft.reviewer_answer),
+            edited=status != "approved" and bool(draft and draft.reviewer_answer),
             note=draft.note if draft else None,
+            approved=Approval(
+                approver=approval.approver,
+                approved_at=approval.approved_at,
+                source_versions=approval.source_versions,
+            )
+            if approval
+            else None,
             allowed_actions=rules.allowed_actions(status),
         )
 
@@ -159,6 +176,33 @@ class Store:
             conn.execute(
                 "UPDATE draft SET reviewer_answer = ? WHERE question_id = ? AND status = 'draft'",
                 (answer, question_id),
+            )
+
+    def get_approval(self, question_hash: str) -> ApprovedRow | None:
+        with self._connect() as conn:
+            row = conn.execute(
+                "SELECT * FROM approved_answer WHERE question_hash = ?", (question_hash,)
+            ).fetchone()
+        if row is None:
+            return None
+        data = dict(row)
+        data["citations"] = [Citation(**c) for c in json.loads(data["citations"])]
+        data["source_versions"] = json.loads(data["source_versions"])
+        return ApprovedRow(**data)
+
+    def save_approval(self, approval: ApprovedRow) -> None:
+        """One write. The question hash is unique, so a second approval changes nothing."""
+        with self._connect() as conn:
+            conn.execute(
+                "INSERT OR IGNORE INTO approved_answer (question_hash, question_text, topic,"
+                " answer, citations, source_versions, approver, approved_at)"
+                " VALUES (:question_hash, :question_text, :topic, :answer, :citations,"
+                " :source_versions, :approver, :approved_at)",
+                {
+                    **approval.model_dump(exclude={"citations", "source_versions"}),
+                    "citations": json.dumps([c.model_dump() for c in approval.citations]),
+                    "source_versions": json.dumps(approval.source_versions),
+                },
             )
 
     @staticmethod

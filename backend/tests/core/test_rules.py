@@ -6,6 +6,7 @@ from qws.core.rules import (
     build_prompt,
     question_hash,
     question_status,
+    source_versions,
     superseded_evidence,
 )
 
@@ -95,3 +96,21 @@ def test_status_is_approved_over_the_draft_status_else_draft_else_new():
     assert question_status(True, "draft") == "approved"
     assert question_status(False, "unresolved") == "unresolved"
     assert question_status(False, None) == "new"
+
+
+def test_source_versions_has_only_cited_documents_never_replaced_ones():
+    # spec: 2.1-a
+    # GIVEN EXPORT-v2 (version 2) replaces EXPORT-v1; the citation is a passage of EXPORT-v2
+    documents = [
+        DocumentRow(id="EXPORT-v1", version=1, date="d", status="s", supersedes_id=None),
+        DocumentRow(id="EXPORT-v2", version=2, date="d", status="s", supersedes_id="EXPORT-v1"),
+    ]
+    passages = [_passage("EXPORT-v1:p1"), _passage("EXPORT-v2:p1")]
+
+    # WHEN the snapshot is computed
+    snapshot = source_versions(
+        [Citation(passage_id="EXPORT-v2:p1", excerpt="t")], documents, passages
+    )
+
+    # THEN only EXPORT-v2 is in it
+    assert snapshot == {"EXPORT-v2": 2}

@@ -51,6 +51,19 @@ def allowed_actions(status: Status) -> list[Action]:
     return list(_ALLOWED_ACTIONS[status])
 
 
+def source_versions(
+    citations: list[Citation], documents: list[DocumentRow], passages: list[PassageRow]
+) -> dict[str, int]:
+    """The version of each cited document. A replaced document that is not cited is left out."""
+    document_of = {p.id: p.document_id for p in passages}
+    version_of = {d.id: d.version for d in documents}
+    return {
+        document_id: version_of[document_id]
+        for c in citations
+        if (document_id := document_of.get(c.passage_id)) in version_of
+    }
+
+
 def normalize_text(text: str) -> str:
     return " ".join(text.split()).casefold()
 

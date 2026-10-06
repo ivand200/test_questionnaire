@@ -16,7 +16,7 @@ from qws.config import (
     drafter_config,
     open_store,
 )
-from qws.core.models import EditRequest, LoadIssue, QuestionSummary, QuestionView, RunAllResult
+from qws.core.models import ApproveRequest, EditRequest, LoadIssue, QuestionSummary, QuestionView, RunAllResult
 from qws.services.draft_service import (
     Conflict,
     DraftService,
@@ -95,6 +95,15 @@ def create_app(
     @app.put("/api/questions/{question_id}/draft")
     def edit_draft(question_id: str, body: EditRequest, request: Request) -> QuestionView:
         result = request.app.state.review.edit(question_id, body.answer)
+        if isinstance(result, UnknownQuestion):
+            raise HTTPException(404, f"Unknown question {question_id}.")
+        if isinstance(result, NotAllowed):
+            raise HTTPException(409, result.reason)
+        return result
+
+    @app.post("/api/questions/{question_id}/approve")
+    def approve(question_id: str, body: ApproveRequest, request: Request) -> QuestionView:
+        result = request.app.state.review.approve(question_id, body.approver)
         if isinstance(result, UnknownQuestion):
             raise HTTPException(404, f"Unknown question {question_id}.")
         if isinstance(result, NotAllowed):
