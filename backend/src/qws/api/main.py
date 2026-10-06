@@ -16,7 +16,7 @@ from qws.config import (
     drafter_config,
     open_store,
 )
-from qws.core.models import ApproveRequest, EditRequest, LeaveOpenRequest, LoadIssue, QuestionSummary, QuestionView, RunAllResult, Status, SummaryCounts, UnknownQuestion
+from qws.core.models import ApproveRequest, BumpResult, EditRequest, LeaveOpenRequest, LoadIssue, QuestionSummary, QuestionView, RunAllResult, Status, SummaryCounts, UnknownQuestion
 from qws.services.draft_service import (
     Conflict,
     DraftService,
@@ -74,6 +74,13 @@ def create_app(
     @app.get("/api/questions")
     def questions(request: Request, status: Status | None = None) -> list[QuestionSummary]:
         return request.app.state.store.list_questions(status)
+
+    @app.post("/api/documents/{document_id}/bump-version")
+    def bump_version(document_id: str, request: Request) -> BumpResult:
+        version = request.app.state.store.bump_version(document_id)
+        if version is None:
+            raise HTTPException(404, f"Unknown document {document_id}.")
+        return BumpResult(id=document_id, version=version)
 
     @app.get("/api/summary")
     def summary(request: Request) -> SummaryCounts:

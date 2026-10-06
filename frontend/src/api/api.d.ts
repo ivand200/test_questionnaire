@@ -55,6 +55,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/documents/{document_id}/bump-version": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Bump Version */
+        post: operations["bump_version_api_documents__document_id__bump_version_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/summary": {
         parameters: {
             query?: never;
@@ -177,6 +194,13 @@ export interface components {
         ApproveRequest: {
             /** Approver */
             approver: string;
+        };
+        /** BumpResult */
+        BumpResult: {
+            /** Id */
+            id: string;
+            /** Version */
+            version: number;
         };
         /** EditRequest */
         EditRequest: {
@@ -393,6 +417,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["QuestionSummary"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    bump_version_api_documents__document_id__bump_version_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                document_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BumpResult"];
                 };
             };
             /** @description Validation Error */

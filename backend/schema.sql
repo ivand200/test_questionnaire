@@ -1,5 +1,6 @@
 -- Seed tables: written by SeedLoader, read only afterwards.
 -- App tables (model_call, draft, approved_answer): written by services.
+-- Exception: document.version is written by bump (Store.bump_version); the load never resets it.
 
 CREATE TABLE IF NOT EXISTS document (
     id            TEXT PRIMARY KEY,

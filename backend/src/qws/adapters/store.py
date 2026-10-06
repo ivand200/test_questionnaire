@@ -160,6 +160,15 @@ class Store:
             rows = conn.execute("SELECT * FROM document ORDER BY rowid").fetchall()
         return [DocumentRow(**dict(r)) for r in rows]
 
+    def bump_version(self, document_id: str) -> int | None:
+        """Add 1 to the version of a document; return the new version, None if unknown."""
+        with self._connect() as conn:
+            row = conn.execute(
+                "UPDATE document SET version = version + 1 WHERE id = ? RETURNING version",
+                (document_id,),
+            ).fetchone()
+        return row["version"] if row else None
+
     def list_passages(self) -> list[PassageRow]:
         with self._connect() as conn:
             rows = conn.execute("SELECT * FROM passage ORDER BY rowid").fetchall()

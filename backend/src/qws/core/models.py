@@ -237,6 +237,11 @@ class ApproveRequest(BaseModel):
     approver: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
 
 
+class BumpResult(BaseModel):
+    id: str
+    version: int
+
+
 class LeaveOpenRequest(BaseModel):
     note: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
 
