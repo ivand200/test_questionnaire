@@ -3,7 +3,7 @@ from datetime import UTC, datetime
 
 from qws.adapters.store import Store
 from qws.core import rules
-from qws.core.models import Action, ApprovedRow, QuestionView, UnknownQuestion
+from qws.core.models import Action, ApprovedRow, Citation, QuestionView, UnknownQuestion
 
 
 @dataclass(frozen=True)
@@ -35,7 +35,11 @@ class ReviewService:
     def approve(
         self, question_id: str, approver: str
     ) -> QuestionView | NotAllowed | UnknownQuestion:
-        """Save the approved answer of a draft that has a citation. Approving twice changes nothing."""
+        """Save the approved answer of a draft that has a citation. Approving twice changes nothing.
+
+        A needs_review question is approved again: the new answer, approver and versions replace the
+        old row.
+        """
         view = self._store.get_question_view(question_id)
         question = self._store.get_question(question_id)
         if view is None or question is None:
@@ -53,7 +57,7 @@ class ReviewService:
                 question_text=question.text,
                 topic=question.topic,
                 answer=view.answer or "",
-                citations=view.citations,
+                citations=[Citation(passage_id=c.passage_id, excerpt=c.excerpt) for c in view.citations],
                 source_versions=rules.source_versions(
                     view.citations, self._store.list_documents(), self._store.list_passages()
                 ),

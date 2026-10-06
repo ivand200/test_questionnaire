@@ -232,13 +232,16 @@ class Store:
         return ApprovedRow(**data)
 
     def save_approval(self, approval: ApprovedRow) -> None:
-        """One write. The question hash is unique, so a second approval changes nothing."""
+        """One write. The question hash is unique: approving again replaces the row (no history)."""
         with self._connect() as conn:
             conn.execute(
-                "INSERT OR IGNORE INTO approved_answer (question_hash, question_text, topic,"
+                "INSERT INTO approved_answer (question_hash, question_text, topic,"
                 " answer, citations, source_versions, approver, approved_at)"
                 " VALUES (:question_hash, :question_text, :topic, :answer, :citations,"
-                " :source_versions, :approver, :approved_at)",
+                " :source_versions, :approver, :approved_at)"
+                " ON CONFLICT (question_hash) DO UPDATE SET answer = excluded.answer,"
+                " citations = excluded.citations, source_versions = excluded.source_versions,"
+                " approver = excluded.approver, approved_at = excluded.approved_at",
                 {
                     **approval.model_dump(exclude={"citations", "source_versions"}),
                     "citations": json.dumps([c.model_dump() for c in approval.citations]),

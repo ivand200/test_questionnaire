@@ -1,6 +1,6 @@
 import json
 
-from conftest import EDIT, call_count, make_client
+from conftest import EDIT, call_count, draft_row, make_client
 from qws.adapters.replay_drafter import ReplayDrafter
 from qws.config import REPLAY_PATH, drafter_config
 from qws.core.models import DrafterReply, Prompt
@@ -177,3 +177,103 @@ def test_a_needs_review_answer_is_not_reused_and_makes_no_model_call(tmp_path):
     assert q3["status"] == "approved"
     assert call_count(tmp_path, "Q1") == 1
     assert call_count(tmp_path, "Q3") == 1
+
+
+class NeverAskedDrafter:
+    """A Drafter that fails the test if it is called."""
+
+    def draft(self, prompt: Prompt) -> DrafterReply:
+        raise AssertionError("the Drafter must not be called")
+
+
+def test_approving_again_replaces_the_approved_answer_with_the_new_versions(tmp_path):
+    # spec: 3.1-a
+    # GIVEN Q1 is needs_review (approved by Anna on v2, EXPORT-v2 is now v3)
+    with make_client(tmp_path) as client:
+        approved_q1(client)
+        bump(client)
+
+        # WHEN the client approves as Ben, the app is started again with a Drafter that fails if
+        # called, then GET Q1 and POST Q1/draft
+        approve = client.post("/api/questions/Q1/approve", json={"approver": "Ben"})
+    with make_client(tmp_path, drafter=NeverAskedDrafter()) as client:
+        view = client.get("/api/questions/Q1")
+        draft = client.post("/api/questions/Q1/draft")
+
+    # THEN approved by Ben on v3 with the old answer and no source_changed warning; one row;
+    # the draft row is kept; after the restart the view is the same; no model call
+    assert approve.status_code == 200
+    body = approve.json()
+    assert body["status"] == "approved"
+    assert body["approved"]["approver"] == "Ben"
+    assert body["answer"] == EDIT
+    assert body["approved"]["source_versions"] == {"EXPORT-v2": 3}
+    assert [(c["passage_id"], c["version"], c["current_version"]) for c in body["citations"]] == [
+        ("EXPORT-v2:p1", 3, 3)
+    ]
+    assert [w for w in body["warnings"] if w["kind"] == "source_changed"] == []
+    assert len(approved_rows(tmp_path)) == 1
+    assert draft_row(tmp_path, "Q1") is not None
+    assert view.json() == body
+    assert draft.status_code == 200
+    assert draft.json() == body
+    assert call_count(tmp_path, "Q1") == 1
+
+
+def test_an_edit_then_approve_saves_the_edit_as_the_new_approved_answer(tmp_path):
+    # spec: 3.1-b
+    # GIVEN Q1 is needs_review
+    new_answer = "No. Free plans cannot export CSV."
+    with make_client(tmp_path) as client:
+        approved_q1(client)
+        bump(client)
+
+        # WHEN the client edits Q1, then approves as Ben
+        client.put("/api/questions/Q1/draft", json={"answer": new_answer})
+        response = client.post("/api/questions/Q1/approve", json={"approver": "Ben"})
+
+    # THEN approved with the edit and the new snapshot; one row
+    body = response.json()
+    assert body["status"] == "approved"
+    assert body["answer"] == new_answer
+    assert body["approved"]["source_versions"] == {"EXPORT-v2": 3}
+    [row] = approved_rows(tmp_path)
+    assert row["answer"] == new_answer
+
+
+def test_the_approved_citations_hold_only_the_passage_id_and_the_excerpt(tmp_path):
+    # spec: 3.1-c
+    # GIVEN Q1 is needs_review
+    with make_client(tmp_path) as client:
+        approved_q1(client)
+        bump(client)
+
+        # WHEN the client approves as Ben
+        client.post("/api/questions/Q1/approve", json={"approver": "Ben"})
+
+    # THEN the saved citations have only passage_id and excerpt
+    [row] = approved_rows(tmp_path)
+    citations = json.loads(row["citations"])
+    assert citations
+    assert all(set(c) == {"passage_id", "excerpt"} for c in citations)
+
+
+def test_a_blank_approver_leaves_a_needs_review_answer_as_it_was(tmp_path):
+    # spec: 3.5-a
+    # GIVEN Q1 is needs_review
+    with make_client(tmp_path) as client:
+        approved_q1(client)
+        bump(client)
+        row_before = approved_rows(tmp_path)
+
+        # WHEN the client approves with a blank approver
+        response = client.post("/api/questions/Q1/approve", json={"approver": "  "})
+        status = client.get("/api/questions/Q1").json()["status"]
+
+    # THEN 422; Q1 is needs_review; the row still has Anna and {"EXPORT-v2": 2}
+    assert response.status_code == 422
+    assert status == "needs_review"
+    rows = approved_rows(tmp_path)
+    assert rows == row_before
+    assert rows[0]["approver"] == "Anna"
+    assert json.loads(rows[0]["source_versions"]) == {"EXPORT-v2": 2}
