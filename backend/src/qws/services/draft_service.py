@@ -34,8 +34,12 @@ class DrafterConfig:
     settings: dict[str, int | float | str]
 
 
+@dataclass(frozen=True)
 class Conflict:
-    """The question already has a draft or an unresolved result, or is being asked right now."""
+    """The question cannot be asked now: it has a draft or an unresolved result, is being asked
+    right now, or needs review. `reason` is a short message for the client."""
+
+    reason: str = "already has a draft."
 
 
 @dataclass(frozen=True)
@@ -94,7 +98,7 @@ class DraftService:
             return UnknownQuestion()
         with self._asking_lock:
             if question_id in self._asking:
-                return Conflict()
+                return Conflict("is being asked right now.")
             self._asking.add(question_id)
         try:
             return self._ask(question)
@@ -121,6 +125,8 @@ class DraftService:
             # Reuse: the approved answer wins; no model call.
             view = self._store.get_question_view(question.id)
             assert view is not None
+            if view.status == "needs_review":
+                return Conflict("needs review: its source changed. Edit or approve it first.")
             return view
         existing = self._store.get_draft(question.id)
         if existing is not None and existing.status in ("draft", "unresolved"):

@@ -1,6 +1,9 @@
 import json
 
 from conftest import EDIT, call_count, make_client
+from qws.adapters.replay_drafter import ReplayDrafter
+from qws.config import REPLAY_PATH, drafter_config
+from qws.core.models import DrafterReply, Prompt
 from test_approve_api import approved_q1, approved_rows
 
 
@@ -119,3 +122,58 @@ def test_a_bump_of_a_document_not_in_the_snapshot_changes_nothing(tmp_path):
     assert body["status"] == "approved"
     assert [w for w in body["warnings"] if w["kind"] == "source_changed"] == []
     assert call_count(tmp_path, "Q1") == 1
+
+
+class GuardedReplayDrafter:
+    """Replays like the app does, but fails the test if asked about one of the guarded questions."""
+
+    def __init__(self, guarded_texts: set[str]) -> None:
+        config = drafter_config()
+        self._replay = ReplayDrafter(config.model, config.settings, REPLAY_PATH)
+        self._guarded = guarded_texts
+        self.asked: list[str] = []
+
+    def draft(self, prompt: Prompt) -> DrafterReply:
+        text = prompt.user.split("\n", 1)[0].removeprefix("Question: ")
+        assert text not in self._guarded, f"the Drafter must not be asked: {text}"
+        self.asked.append(text)
+        return self._replay.draft(prompt)
+
+
+def test_a_needs_review_answer_is_not_reused_and_makes_no_model_call(tmp_path):
+    # spec: 2.2-a
+    # GIVEN Run all ran; Q1 and Q3 are approved by Anna; EXPORT-v2 is bumped to version 3;
+    # the app is started again with a Drafter that fails the test if asked about Q1 or Q3
+    with make_client(tmp_path) as client:
+        client.post("/api/questionnaire/run")
+        approve_q1_and_q3(client)
+        bump(client)
+        texts = {client.get(f"/api/questions/{q}").json()["text"] for q in ("Q1", "Q3")}
+        q9_text = client.get("/api/questions/Q9").json()["text"]
+    drafter = GuardedReplayDrafter(texts)
+    with make_client(tmp_path, drafter=drafter) as client:
+        # WHEN the client sends GET Q1, POST Q1/draft, POST run, GET summary
+        view = client.get("/api/questions/Q1").json()
+        draft = client.post("/api/questions/Q1/draft")
+        run = client.post("/api/questionnaire/run")
+        summary = client.get("/api/summary").json()
+        q3 = client.get("/api/questions/Q3").json()
+        q9 = client.get("/api/questions/Q9").json()
+
+    # THEN Q1 is needs_review with the old answer; the draft call gives 409 with a short message;
+    # only Q9 is asked (and stays error); the summary counts needs_review; Q3 is approved;
+    # Q1 and Q3 have 1 model call each; the Drafter was not asked about Q1 or Q3
+    assert view["status"] == "needs_review"
+    assert view["answer"] == EDIT
+    assert draft.status_code == 409
+    assert 0 < len(draft.json()["detail"]) < 100
+    assert run.json() == {"asked": ["Q9"]}
+    assert drafter.asked == [q9_text]
+    assert q9["status"] == "error"
+    assert summary == {
+        "new": 0, "draft": 5, "unresolved": 1, "approved": 1, "needs_review": 1, "error": 1,
+        "answered": 6,
+    }
+    assert q3["status"] == "approved"
+    assert call_count(tmp_path, "Q1") == 1
+    assert call_count(tmp_path, "Q3") == 1

@@ -99,7 +99,7 @@ def create_app(
         if isinstance(result, UnknownQuestion):
             raise HTTPException(404, f"Unknown question {question_id}.")
         if isinstance(result, Conflict):
-            raise HTTPException(409, f"Question {question_id} already has a draft.")
+            raise HTTPException(409, f"Question {question_id} {result.reason}")
         return result
 
     @app.put("/api/questions/{question_id}/draft")
