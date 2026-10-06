@@ -24,16 +24,30 @@ def reply_json(verdict="supported", answer="Monday to Friday, 09:00–17:00 UTC"
     return json.dumps({"answer": answer, "verdict": verdict, "citations": list(citations)})
 
 
-class FakeDrafter:
-    """Returns scripted replies, one per call, and keeps the prompts it was given."""
+SUPPORTS = json.dumps({"result": "supports", "reason": "The passage states the hours."})
 
-    def __init__(self, *replies: DrafterReply) -> None:
+
+class FakeDrafter:
+    """Returns scripted replies, one per draft call, and keeps the prompts it was given.
+
+    The judge answers `supports` for every call unless `judge_replies` gives its own, in order.
+    """
+
+    def __init__(self, *replies: DrafterReply, judge_replies: list[DrafterReply] | None = None):
         self._replies = list(replies)
+        self._judge_replies = judge_replies
         self.prompts: list[Prompt] = []
+        self.judge_prompts: list[Prompt] = []
 
     def draft(self, prompt: Prompt) -> DrafterReply:
         self.prompts.append(prompt)
         return self._replies.pop(0)
+
+    def judge(self, prompt: Prompt) -> DrafterReply:
+        self.judge_prompts.append(prompt)
+        if self._judge_replies is None:
+            return ok(SUPPORTS)
+        return self._judge_replies.pop(0)
 
 
 def ok(raw: str | None = None, **fields) -> DrafterReply:
@@ -82,7 +96,7 @@ def test_asking_for_q3_saves_a_draft_with_the_exact_passage_as_excerpt(tmp_path)
         statuses = {q["id"]: q["status"] for q in client.get("/api/questions").json()}
         assert statuses["Q3"] == "draft"
         assert {s for i, s in statuses.items() if i != "Q3"} == {"new"}
-    assert len(db_rows(tmp_path, "model_call")) == 1
+    assert len(db_rows(tmp_path, "model_call")) == 2  # the draft call and the judge call
 
 
 def test_a_question_with_status_error_can_be_asked_again(tmp_path):
@@ -96,12 +110,13 @@ def test_a_question_with_status_error_can_be_asked_again(tmp_path):
         # WHEN the user asks for a draft of Q3
         response = client.post("/api/questions/Q3/draft")
 
-    # THEN the Drafter is called once more; 2 model calls; the first is unchanged; Q3 has the new result
+    # THEN the Drafter is called once more; 3 model calls (failed draft, draft, judge); the first is
+    # unchanged; Q3 has the new result
     assert response.status_code == 200
     assert response.json()["status"] == "draft"
     calls = db_rows(tmp_path, "model_call")
     assert len(drafter.prompts) == 2
-    assert len(calls) == 2
+    assert len(calls) == 3
     assert calls[0] == first_call
 
 
@@ -160,7 +175,7 @@ def test_the_system_part_has_no_passage_text(tmp_path):
 @pytest.mark.parametrize("raw", [reply_json(), reply_json("not_documented", citations=())])
 def test_asking_for_a_question_with_a_draft_or_unresolved_gives_409_and_no_model_call(tmp_path, raw):
     # spec: 2.4-a
-    # GIVEN Q3 has status draft (or unresolved) and 1 model call
+    # GIVEN Q3 has status draft (or unresolved) and its model calls (a draft has 2: draft and judge)
     drafter = FakeDrafter(ok(raw))
     with make_client(tmp_path, drafter) as client:
         client.post("/api/questions/Q3/draft")
@@ -168,10 +183,11 @@ def test_asking_for_a_question_with_a_draft_or_unresolved_gives_409_and_no_model
         # WHEN a client sends POST /api/questions/Q3/draft
         response = client.post("/api/questions/Q3/draft")
 
-    # THEN HTTP 409; the Drafter is not called; there is still 1 model call
+    # THEN HTTP 409; the Drafter is not called; the model calls are the same as before
     assert response.status_code == 409
     assert len(drafter.prompts) == 1
-    assert len(db_rows(tmp_path, "model_call")) == 1
+    assert len(drafter.judge_prompts) == (1 if raw == reply_json() else 0)
+    assert len(db_rows(tmp_path, "model_call")) == (2 if raw == reply_json() else 1)
 
 
 def test_a_restart_on_the_same_database_keeps_the_draft_and_the_model_call(tmp_path):
@@ -203,8 +219,8 @@ def test_a_model_call_keeps_prompt_raw_reply_model_settings_label_latency_and_to
         # WHEN the draft is saved
         client.post("/api/questions/Q3/draft")
 
-    # THEN one model call row has all of it
-    [call] = db_rows(tmp_path, "model_call")
+    # THEN the draft call row has all of it
+    call = db_rows(tmp_path, "model_call")[0]
     assert json.loads(call["prompt"]) == {
         "system": drafter.prompts[0].system,
         "user": drafter.prompts[0].user,
@@ -343,15 +359,21 @@ def test_a_real_drafter_returns_the_raw_reply_and_the_token_counts(tmp_path):
     # spec: 2.6-a
     # GIVEN the real adapter on a fake model that replies with a valid JSON text
     raw = reply_json()
-    model = FunctionModel(lambda messages, info: ModelResponse(parts=[TextPart(raw)]))
-    drafter = RealDrafter("m1", "k", MODEL_SETTINGS, model=model)
+
+    def answer(messages, info):
+        asked = str(messages[-1].parts[0].content)
+        return ModelResponse(parts=[TextPart(SUPPORTS if "Cited passages" in asked else raw)])
+
+    drafter = RealDrafter("m1", "k", MODEL_SETTINGS, model=FunctionModel(answer))
     with make_client(tmp_path, drafter) as client:
         # WHEN the user asks for a draft of Q3
         body = client.post("/api/questions/Q3/draft").json()
 
-    # THEN the draft cites SUPPORT-v1:p1 and the model call keeps the raw reply, label real and tokens
+    # THEN the draft cites SUPPORT-v1:p1 and the draft call keeps the raw reply, label real and
+    # tokens; the judge call keeps its own raw reply
     assert body["status"] == "draft"
-    [call] = db_rows(tmp_path, "model_call")
+    call, judge_call = db_rows(tmp_path, "model_call")
+    assert judge_call["raw_response"] == SUPPORTS
     assert call["raw_response"] == raw
     assert call["label"] == "real"
     assert call["input_tokens"] > 0
@@ -400,12 +422,13 @@ def test_two_requests_at_once_for_a_new_question_make_one_model_call(tmp_path):
         release.set()
         thread.join(5)
 
-    # THEN the second gets 409; the Drafter is called once; there is one model call
+    # THEN the second gets 409; the Drafter is called once for the draft and once for the judge
     assert second.status_code == 409
     assert first[0].status_code == 200
     assert first[0].json()["status"] == "draft"
     assert len(drafter.prompts) == 1
-    assert len(db_rows(tmp_path, "model_call")) == 1
+    assert len(drafter.judge_prompts) == 1
+    assert len(db_rows(tmp_path, "model_call")) == 2
 
 
 def test_get_question_returns_the_draft_view_with_allowed_actions(tmp_path):
@@ -509,7 +532,7 @@ def test_the_replaced_passage_is_not_in_the_saved_prompt_nor_stored_and_reads_ag
 
     # THEN the saved prompt has no EXPORT-v1:p1; the saved draft has no superseded warning;
     # both reads give the same body
-    [call] = db_rows(tmp_path, "model_call")
+    call = db_rows(tmp_path, "model_call")[0]
     assert "EXPORT-v1:p1" not in call["prompt"]
     [draft] = db_rows(tmp_path, "draft")
     assert "superseded" not in draft["warnings"]

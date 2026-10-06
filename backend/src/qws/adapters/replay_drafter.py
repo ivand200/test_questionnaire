@@ -19,6 +19,12 @@ class ReplayDrafter:
         return DrafterReply(label=label, model=self._model, settings=self._settings, **fields)
 
     def draft(self, prompt: Prompt) -> DrafterReply:
+        return self._lookup(prompt)
+
+    def judge(self, prompt: Prompt) -> DrafterReply:
+        return self._lookup(prompt)
+
+    def _lookup(self, prompt: Prompt) -> DrafterReply:
         try:
             entries = read_entries(self._path)
         except (OSError, ValueError):

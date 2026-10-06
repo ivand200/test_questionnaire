@@ -28,7 +28,7 @@ def test_edit_saves_the_reviewer_answer_and_keeps_the_model_answer(tmp_path):
     assert row["model_answer"] == ORIGINAL
     assert row["reviewer_answer"] == EDIT
     assert approved_count(tmp_path) == 0
-    assert call_count(tmp_path, "Q1") == 1
+    assert call_count(tmp_path, "Q1") == 2  # the draft call and the judge call
 
 
 def test_an_edit_survives_a_restart(tmp_path):
@@ -100,13 +100,13 @@ def test_an_edit_without_approval_stays_a_draft_when_asked_again_or_run_all(tmp_
         run = client.post("/api/questionnaire/run")
         body = client.get("/api/questions/Q1").json()
 
-    # THEN 409; Q1 is not asked; still draft with the edit; no approval; 1 model call
+    # THEN 409; Q1 is not asked; still draft with the edit; no approval; 2 model calls (draft and judge)
     assert asked_again.status_code == 409
     assert "Q1" not in run.json()["asked"]
     assert body["status"] == "draft"
     assert body["answer"] == EDIT
     assert approved_count(tmp_path) == 0
-    assert call_count(tmp_path, "Q1") == 1
+    assert call_count(tmp_path, "Q1") == 2  # the draft call and the judge call
 
 
 def test_allowed_actions_follow_the_status(tmp_path):

@@ -2,6 +2,7 @@ import time
 
 import openai
 from openai import AsyncOpenAI
+from pydantic import BaseModel
 from pydantic_ai import Agent, NativeOutput, capture_run_messages
 from pydantic_ai.exceptions import ModelHTTPError, UnexpectedModelBehavior
 from pydantic_ai.messages import ModelResponse
@@ -9,7 +10,7 @@ from pydantic_ai.models import Model
 from pydantic_ai.models.openai import OpenAIResponsesModel
 from pydantic_ai.providers.openai import OpenAIProvider
 
-from qws.core.models import DrafterReply, Prompt, Reply
+from qws.core.models import DrafterReply, Prompt, Reply, SupportReply
 
 TIMEOUT_SECONDS = 60
 
@@ -56,6 +57,12 @@ class RealDrafter:
         return DrafterReply(label="real", model=self._model_name, settings=self._settings, **fields)
 
     def draft(self, prompt: Prompt) -> DrafterReply:
+        return self._ask(prompt, Reply)
+
+    def judge(self, prompt: Prompt) -> DrafterReply:
+        return self._ask(prompt, SupportReply)
+
+    def _ask(self, prompt: Prompt, output_type: type[BaseModel]) -> DrafterReply:
         if self._model is None and not self._api_key:
             return self._reply(error="OPENAI_API_KEY is not set.")
         if self._model is None and not self._model_name:
@@ -64,7 +71,7 @@ class RealDrafter:
         try:
             agent = Agent(
                 self._build_model(),
-                output_type=NativeOutput(Reply),
+                output_type=NativeOutput(output_type),
                 instructions=prompt.system,
                 retries=0,
             )

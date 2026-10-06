@@ -28,7 +28,7 @@ def test_approve_saves_the_edit_with_a_snapshot_of_the_cited_document(tmp_path):
         response = approved_q1(client)
 
     # THEN 200; approved; the edit; Anna; the time; snapshot only EXPORT-v2; one row;
-    # the draft row keeps the model answer; 1 model call
+    # the draft row keeps the model answer; 2 model calls (draft and judge)
     assert response.status_code == 200
     body = response.json()
     assert body["status"] == "approved"
@@ -42,7 +42,7 @@ def test_approve_saves_the_edit_with_a_snapshot_of_the_cited_document(tmp_path):
     assert len(rows) == 1
     assert json.loads(rows[0]["source_versions"]) == {"EXPORT-v2": 2}
     assert draft_row(tmp_path, "Q1")["model_answer"] == ORIGINAL
-    assert call_count(tmp_path, "Q1") == 1
+    assert call_count(tmp_path, "Q1") == 2  # the draft call and the judge call
 
 
 def test_approve_without_an_edit_uses_the_model_answer(tmp_path):

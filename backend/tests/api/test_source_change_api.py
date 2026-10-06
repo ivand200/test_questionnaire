@@ -126,7 +126,7 @@ def test_a_bump_of_a_document_not_in_the_snapshot_changes_nothing(tmp_path):
     assert bumped.json() == {"id": "EXPORT-v1", "version": 2}
     assert body["status"] == "approved"
     assert [w for w in body["warnings"] if w["kind"] == "source_changed"] == []
-    assert call_count(tmp_path, "Q1") == 1
+    assert call_count(tmp_path, "Q1") == 2  # the draft call and the judge call
 
 
 class GuardedReplayDrafter:
@@ -143,6 +143,9 @@ class GuardedReplayDrafter:
         assert text not in self._guarded, f"the Drafter must not be asked: {text}"
         self.asked.append(text)
         return self._replay.draft(prompt)
+
+    def judge(self, prompt: Prompt) -> DrafterReply:
+        return self._replay.judge(prompt)
 
 
 def test_a_needs_review_answer_is_not_reused_and_makes_no_model_call(tmp_path):
@@ -167,7 +170,7 @@ def test_a_needs_review_answer_is_not_reused_and_makes_no_model_call(tmp_path):
 
     # THEN Q1 is needs_review with the old answer; the draft call gives 409 with a short message;
     # only Q9 is asked (and stays error); the summary counts needs_review; Q3 is approved;
-    # Q1 and Q3 have 1 model call each; the Drafter was not asked about Q1 or Q3
+    # Q1 and Q3 have 2 model calls each (draft and judge); the Drafter was not asked about Q1 or Q3
     assert view["status"] == "needs_review"
     assert view["answer"] == EDIT
     assert draft.status_code == 409
@@ -180,14 +183,17 @@ def test_a_needs_review_answer_is_not_reused_and_makes_no_model_call(tmp_path):
         "answered": 6,
     }
     assert q3["status"] == "approved"
-    assert call_count(tmp_path, "Q1") == 1
-    assert call_count(tmp_path, "Q3") == 1
+    assert call_count(tmp_path, "Q1") == 2  # the draft call and the judge call
+    assert call_count(tmp_path, "Q3") == 2
 
 
 class NeverAskedDrafter:
     """A Drafter that fails the test if it is called."""
 
     def draft(self, prompt: Prompt) -> DrafterReply:
+        raise AssertionError("the Drafter must not be called")
+
+    def judge(self, prompt: Prompt) -> DrafterReply:
         raise AssertionError("the Drafter must not be called")
 
 
@@ -223,7 +229,7 @@ def test_approving_again_replaces_the_approved_answer_with_the_new_versions(tmp_
     assert view.json() == body
     assert draft.status_code == 200
     assert draft.json() == body
-    assert call_count(tmp_path, "Q1") == 1
+    assert call_count(tmp_path, "Q1") == 2  # the draft call and the judge call
 
 
 def test_an_edit_then_approve_saves_the_edit_as_the_new_approved_answer(tmp_path):
@@ -310,7 +316,7 @@ def test_an_edit_on_a_needs_review_answer_is_saved_but_not_reused(tmp_path):
     assert view.json() == body
     assert approved_rows(tmp_path) == row_before
     assert approved_rows(tmp_path)[0]["approver"] == "Anna"
-    assert call_count(tmp_path, "Q1") == 1
+    assert call_count(tmp_path, "Q1") == 2  # the draft call and the judge call
 
 
 def test_a_blank_edit_on_a_needs_review_answer_gives_422_and_changes_nothing(tmp_path):

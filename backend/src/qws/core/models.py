@@ -80,6 +80,13 @@ class Reply(BaseModel):
     citations: list[str]
 
 
+class SupportReply(BaseModel):
+    """What the judge answers: do the cited passages support the answer?"""
+
+    result: Literal["supports", "contradicts", "unclear"]
+    reason: str
+
+
 class Citation(BaseModel):
     passage_id: str
     excerpt: str

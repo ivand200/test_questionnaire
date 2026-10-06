@@ -13,6 +13,10 @@ class FailingDrafter:
         self.calls += 1
         raise AssertionError("the Drafter must not be called for an approved question")
 
+    def judge(self, prompt: Prompt) -> DrafterReply:
+        self.calls += 1
+        raise AssertionError("the Drafter must not be called for an approved question")
+
 
 def test_ask_again_on_an_approved_question_returns_the_approved_view_with_no_model_call(tmp_path):
     # spec: 4.2-a
@@ -24,7 +28,7 @@ def test_ask_again_on_an_approved_question_returns_the_approved_view_with_no_mod
         # WHEN the client sends POST /api/questions/Q1/draft
         response = client.post("/api/questions/Q1/draft")
 
-    # THEN 200; approved view with the edit, Anna, the snapshot and the version on each citation; no Drafter call; 1 model call
+    # THEN 200; approved view with the edit, Anna, the snapshot and the version on each citation; no Drafter call; 2 model calls (draft and judge)
     assert response.status_code == 200
     body = response.json()
     assert body["status"] == "approved"
@@ -33,7 +37,7 @@ def test_ask_again_on_an_approved_question_returns_the_approved_view_with_no_mod
     assert body["approved"]["source_versions"] == {"EXPORT-v2": 2}
     assert [(c["passage_id"], c["version"]) for c in body["citations"]] == [("EXPORT-v2:p1", 2)]
     assert drafter.calls == 0
-    assert call_count(tmp_path, "Q1") == 1
+    assert call_count(tmp_path, "Q1") == 2  # the draft call and the judge call
     assert len(approved_rows(tmp_path)) == 1
 
 
@@ -47,9 +51,9 @@ def test_run_all_skips_an_approved_question_and_asks_the_rest(tmp_path):
         # WHEN the client sends POST /api/questionnaire/run
         response = client.post("/api/questionnaire/run")
 
-    # THEN asked is Q2 to Q9; Q1 is not asked and keeps 1 model call
+    # THEN asked is Q2 to Q9; Q1 is not asked and keeps its 2 model calls
     assert response.json() == {"asked": ALL[1:]}
-    assert call_count(tmp_path, "Q1") == 1
+    assert call_count(tmp_path, "Q1") == 2  # the draft call and the judge call
 
 
 def test_an_approved_answer_survives_a_restart(tmp_path):

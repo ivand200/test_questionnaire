@@ -8,6 +8,7 @@ from pydantic import ValidationError
 from qws.adapters.store import Store
 from qws.core import rules
 from qws.core.models import (
+    Checked,
     DraftRow,
     DrafterReply,
     ModelCallRow,
@@ -16,6 +17,7 @@ from qws.core.models import (
     QuestionRow,
     QuestionView,
     Reply,
+    SupportReply,
     UnknownQuestion,
 )
 
@@ -26,6 +28,8 @@ class Drafter(Protocol):
     """Asks a model for an answer. Never raises: a failure comes back in `error`."""
 
     def draft(self, prompt: Prompt) -> DrafterReply: ...
+
+    def judge(self, prompt: Prompt) -> DrafterReply: ...
 
 
 @dataclass(frozen=True)
@@ -51,6 +55,23 @@ class Attempt:
     passages: list[PassageRow]
 
 
+def _model_call(question: QuestionRow, prompt: Prompt, drafted: DrafterReply, error: str | None):
+    return ModelCallRow(
+        question_id=question.id,
+        input_hash=prompt.input_hash,
+        prompt=prompt.model_dump_json(include={"system", "user"}),
+        model=drafted.model,
+        settings=drafted.settings,
+        raw_response=drafted.raw_reply,
+        error=error,
+        label=drafted.label,
+        created_at=datetime.now(UTC).isoformat(),
+        latency_ms=drafted.latency_ms,
+        input_tokens=drafted.input_tokens,
+        output_tokens=drafted.output_tokens,
+    )
+
+
 def attempt(
     store: Store, drafter: Drafter, config: DrafterConfig, question: QuestionRow
 ) -> Attempt:
@@ -66,22 +87,40 @@ def attempt(
             reply = Reply.model_validate_json(drafted.raw_reply or "")
         except ValidationError:
             error = INVALID_REPLY
+    return Attempt(call=_model_call(question, prompt, drafted, error), reply=reply, passages=passages)
 
-    call = ModelCallRow(
-        question_id=question.id,
-        input_hash=prompt.input_hash,
-        prompt=prompt.model_dump_json(include={"system", "user"}),
-        model=drafted.model,
-        settings=drafted.settings,
-        raw_response=drafted.raw_reply,
-        error=error,
-        label=drafted.label,
-        created_at=datetime.now(UTC).isoformat(),
-        latency_ms=drafted.latency_ms,
-        input_tokens=drafted.input_tokens,
-        output_tokens=drafted.output_tokens,
+
+@dataclass(frozen=True)
+class Asked:
+    """The result of `ask_model`: the draft step, and the support check when it ran."""
+
+    call: ModelCallRow
+    checked: Checked | None
+    judge_call: ModelCallRow | None
+    support: SupportReply | None  # the valid Support reply; None when there is no judge call or it failed
+
+
+def ask_model(
+    store: Store, drafter: Drafter, config: DrafterConfig, question: QuestionRow
+) -> Asked:
+    """Draft, check, and (only for a checked status `draft`) ask the judge. Saves nothing."""
+    made = attempt(store, drafter, config, question)
+    checked = rules.check_reply(made.reply, made.passages) if made.reply else None
+    if checked is None or checked.status != "draft":
+        return Asked(made.call, checked, None, None)
+
+    prompt = rules.build_support_prompt(
+        question.text, checked.answer, checked.citations, config.model, config.settings
     )
-    return Attempt(call=call, reply=reply, passages=passages)
+    judged = drafter.judge(prompt)
+    error = judged.error
+    support = None
+    if error is None:
+        try:
+            support = SupportReply.model_validate_json(judged.raw_reply or "")
+        except ValidationError:
+            error = INVALID_REPLY
+    return Asked(made.call, checked, _model_call(question, prompt, judged, error), support)
 
 
 class DraftService:
@@ -132,8 +171,8 @@ class DraftService:
         if existing is not None and existing.status in ("draft", "unresolved"):
             return Conflict()
 
-        made = attempt(self._store, self._drafter, self._config, question)
-        checked = rules.check_reply(made.reply, made.passages) if made.reply else None
+        asked = ask_model(self._store, self._drafter, self._config, question)
+        checked = asked.checked
         draft = DraftRow(
             question_id=question.id,
             status=checked.status if checked else "error",
@@ -142,9 +181,9 @@ class DraftService:
             citations=checked.citations if checked else [],
             warnings=checked.warnings if checked else [],
             model_call_id=None,
-            updated_at=made.call.created_at,
+            updated_at=asked.call.created_at,
         )
-        self._store.save_result(made.call, draft)
+        self._store.save_result(asked.call, draft, asked.judge_call)
         view = self._store.get_question_view(question.id)
         assert view is not None
         return view

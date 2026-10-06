@@ -270,10 +270,15 @@ class Store:
         with self._connect() as conn:
             self._insert_call(conn, call)
 
-    def save_result(self, call: ModelCallRow, draft: DraftRow) -> None:
-        """Insert the model call (never changed later) and set the draft, in one transaction."""
+    def save_result(
+        self, call: ModelCallRow, draft: DraftRow, judge_call: ModelCallRow | None = None
+    ) -> None:
+        """Insert the draft call, then the judge call (never changed later), then set the draft,
+        in one transaction. The draft points at the draft call."""
         with self._connect() as conn:
             call_id = self._insert_call(conn, call)
+            if judge_call is not None:
+                self._insert_call(conn, judge_call)
             conn.execute(
                 "INSERT OR REPLACE INTO draft (question_id, status, verdict, model_answer,"
                 " citations, warnings, model_call_id, updated_at)"

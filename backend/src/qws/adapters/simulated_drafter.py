@@ -15,3 +15,6 @@ class SimulatedDrafter:
         return DrafterReply(
             label="simulated", model=self._model, settings=self._settings, error=TIMEOUT_ERROR
         )
+
+    def judge(self, prompt: Prompt) -> DrafterReply:
+        return self.draft(prompt)

@@ -5,6 +5,7 @@ from qws.core.rules import (
     SYSTEM_PROMPT,
     allowed_actions,
     build_prompt,
+    build_support_prompt,
     changed_sources,
     question_hash,
     question_status,
@@ -173,3 +174,22 @@ def test_summary_counts_answered_is_draft_plus_approved():
         "new": 0, "draft": 5, "unresolved": 1, "approved": 1, "needs_review": 1, "error": 1,
         "answered": 6,
     }
+
+
+def test_the_support_prompt_holds_the_answer_and_the_excerpts_and_its_hash_follows_its_inputs():
+    # spec: 1.1-a, 1.1-b, 3.1-a (p5)
+    # GIVEN a question, an answer and one citation
+    cited = [Citation(passage_id="A-v1:p1", excerpt="Text of A.")]
+    settings = {"temperature": 0}
+
+    # WHEN the support prompt is built
+    prompt = build_support_prompt("Is it A?", "Yes, A.", cited, "m1", settings)
+
+    # THEN the user text has the question, the answer and the excerpt; the hash changes with the
+    # answer, the model and the settings, and stays the same for the same inputs
+    assert "Is it A?" in prompt.user and "Yes, A." in prompt.user and "[A-v1:p1] Text of A." in prompt.user
+    assert prompt.passage_ids == ["A-v1:p1"]
+    assert prompt.input_hash == build_support_prompt("Is it A?", "Yes, A.", cited, "m1", settings).input_hash
+    assert prompt.input_hash != build_support_prompt("Is it A?", "No.", cited, "m1", settings).input_hash
+    assert prompt.input_hash != build_support_prompt("Is it A?", "Yes, A.", cited, "m2", settings).input_hash
+    assert prompt.input_hash != build_support_prompt("Is it A?", "Yes, A.", cited, "m1", {"temperature": 1}).input_hash

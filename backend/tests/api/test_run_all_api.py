@@ -20,7 +20,8 @@ class ScriptedDrafter:
     def __init__(self, failing=(), unresolved=()) -> None:
         self.failing = set(failing)
         self.unresolved = set(unresolved)
-        self.asked: list[str] = []
+        self.asked: list[str] = []  # the questions of the draft calls; the judge is not counted
+        self.judged = 0
 
     def draft(self, prompt: Prompt) -> DrafterReply:
         text = prompt.user.split("\n", 1)[0].removeprefix("Question: ")
@@ -33,6 +34,13 @@ class ScriptedDrafter:
         else:
             raw = {"answer": "Yes.", "verdict": "supported", "citations": ["SUPPORT-v1:p1"]}
         return DrafterReply(raw_reply=json.dumps(raw), **base)
+
+    def judge(self, prompt: Prompt) -> DrafterReply:
+        self.judged += 1
+        raw = {"result": "supports", "reason": "The passage says so."}
+        return DrafterReply(
+            raw_reply=json.dumps(raw), label="real", model="m1", settings={"temperature": 0}
+        )
 
 
 def statuses(client: TestClient) -> dict[str, str]:
@@ -68,10 +76,10 @@ def test_a_second_run_asks_only_the_question_that_is_still_an_error(tmp_path):
         # WHEN the client sends POST /api/questionnaire/run again
         response = client.post("/api/questionnaire/run")
 
-    # THEN asked is Q9; Q9 has 2 model calls; Q1 to Q8 have 1 each
+    # THEN asked is Q9; Q9 has 2 model calls; Q1 to Q8 have 2 each (draft and judge), Q2 has 1
     assert response.json() == {"asked": ["Q9"]}
     assert call_count(tmp_path, "Q9") == 2
-    assert [call_count(tmp_path, f"Q{n}") for n in range(1, 9)] == [1] * 8
+    assert [call_count(tmp_path, f"Q{n}") for n in range(1, 9)] == [2, 1, 2, 2, 2, 2, 2, 2]
 
 
 def test_run_all_skips_questions_with_a_draft_or_unresolved(tmp_path):
@@ -88,14 +96,14 @@ def test_run_all_skips_questions_with_a_draft_or_unresolved(tmp_path):
         # WHEN the client sends POST /api/questionnaire/run
         response = client.post("/api/questionnaire/run")
 
-        # THEN Q2 and Q3 are not asked; they keep 1 model call and the same draft
+        # THEN Q2 and Q3 are not asked; they keep their model calls and the same draft
         assert response.json() == {"asked": ["Q1", "Q4", "Q5", "Q6", "Q7", "Q8", "Q9"]}
         after = {i: client.get(f"/api/questions/{i}").json() for i in ("Q2", "Q3")}
     assert after == before
     assert Q2_TEXT not in drafter.asked
     assert "When is email support available?" not in drafter.asked
     assert call_count(tmp_path, "Q2") == 1
-    assert call_count(tmp_path, "Q3") == 1
+    assert call_count(tmp_path, "Q3") == 2  # the draft call and the judge call
 
 
 def test_a_timeout_for_q4_does_not_stop_the_other_questions(tmp_path):

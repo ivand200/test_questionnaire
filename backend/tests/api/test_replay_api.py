@@ -32,11 +32,13 @@ def test_replay_gives_the_q3_draft_from_the_committed_file_with_no_key(tmp_path)
     assert [c["passage_id"] for c in body["citations"]] == ["SUPPORT-v1:p1"]
     assert body["citations"][0]["excerpt"] == SUPPORT_EXCERPT
     conn = sqlite3.connect(tmp_path / "test.db")
-    [(label, input_tokens, output_tokens)] = conn.execute(
-        "SELECT label, input_tokens, output_tokens FROM model_call"
+    [draft_call, judge_call] = conn.execute(
+        "SELECT label, input_tokens, output_tokens, error FROM model_call ORDER BY id"
     ).fetchall()
     conn.close()
-    assert (label, input_tokens, output_tokens) == ("cached", None, None)
+    assert draft_call == ("cached", None, None, None)
+    # until `make record` saves judge replies (ticket 3) the judge call has no entry and is saved
+    assert judge_call[3] == "No saved response for this input."
 
 
 def test_replay_with_no_entry_gives_error_and_no_exception(tmp_path, monkeypatch):
