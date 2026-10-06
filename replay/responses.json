@@ -1,0 +1,13 @@
+[
+  {
+    "input_hash": "cf0821f51d9c5b3f29b3f99cceca6d279f50907095c15cd66967e3d0257e4b77",
+    "label": "real",
+    "model": "gpt-4.1-mini",
+    "settings": {
+      "temperature": 0,
+      "max_tokens": 1000
+    },
+    "raw_response": "{\"answer\":\"Email support is available Monday to Friday, 09:00 to 17:00 UTC.\",\"verdict\":\"supported\",\"citations\":[\"SUPPORT-v1:p1\"]}",
+    "recorded_at": "2026-10-06T15:27:59.541243+00:00"
+  }
+]

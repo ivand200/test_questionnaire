@@ -110,16 +110,27 @@ class Store:
         data["warnings"] = json.loads(data["warnings"])
         return DraftRow(**data)
 
+    @staticmethod
+    def _insert_call(conn: sqlite3.Connection, call: ModelCallRow) -> int:
+        cursor = conn.execute(
+            "INSERT INTO model_call (question_id, input_hash, prompt, model, settings,"
+            " raw_response, error, label, created_at, latency_ms, input_tokens, output_tokens)"
+            " VALUES (:question_id, :input_hash, :prompt, :model, :settings, :raw_response,"
+            " :error, :label, :created_at, :latency_ms, :input_tokens, :output_tokens)",
+            {**call.model_dump(), "settings": json.dumps(call.settings, sort_keys=True)},
+        )
+        assert cursor.lastrowid is not None
+        return cursor.lastrowid
+
+    def save_model_call(self, call: ModelCallRow) -> None:
+        """Insert a model call that has no draft (a recording)."""
+        with self._connect() as conn:
+            self._insert_call(conn, call)
+
     def save_result(self, call: ModelCallRow, draft: DraftRow) -> None:
         """Insert the model call (never changed later) and set the draft, in one transaction."""
         with self._connect() as conn:
-            cursor = conn.execute(
-                "INSERT INTO model_call (question_id, input_hash, prompt, model, settings,"
-                " raw_response, error, label, created_at, latency_ms, input_tokens, output_tokens)"
-                " VALUES (:question_id, :input_hash, :prompt, :model, :settings, :raw_response,"
-                " :error, :label, :created_at, :latency_ms, :input_tokens, :output_tokens)",
-                {**call.model_dump(), "settings": json.dumps(call.settings, sort_keys=True)},
-            )
+            call_id = self._insert_call(conn, call)
             conn.execute(
                 "INSERT OR REPLACE INTO draft (question_id, status, verdict, model_answer,"
                 " citations, warnings, model_call_id, updated_at)"
@@ -129,6 +140,6 @@ class Store:
                     **draft.model_dump(exclude={"citations", "warnings", "error"}),
                     "citations": json.dumps([c.model_dump() for c in draft.citations]),
                     "warnings": json.dumps([w.model_dump() for w in draft.warnings]),
-                    "model_call_id": cursor.lastrowid,
+                    "model_call_id": call_id,
                 },
             )

@@ -159,3 +159,14 @@ class QuestionView(BaseModel):
     warnings: list[Warning]
     error: str | None
     allowed_actions: list[Literal["generate", "retry"]]
+
+
+class ReplayEntry(BaseModel):
+    """One saved real reply in replay/responses.json, found by input hash."""
+
+    input_hash: str
+    label: Label
+    model: str
+    settings: dict[str, int | float | str]
+    raw_response: str
+    recorded_at: str

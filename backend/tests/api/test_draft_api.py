@@ -9,7 +9,8 @@ from pydantic_ai.messages import ModelResponse, TextPart
 from pydantic_ai.models.function import FunctionModel
 
 from qws.adapters.real_drafter import RealDrafter
-from qws.api.main import MODEL_SETTINGS, SEED_PATH, create_app
+from qws.api.main import create_app
+from qws.config import MODEL_SETTINGS, SEED_PATH
 from qws.core.models import DrafterReply, Prompt
 
 REAL_SEED = json.loads(SEED_PATH.read_text())

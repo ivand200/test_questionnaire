@@ -12,6 +12,13 @@ from pydantic import BaseModel
 from qws.adapters.real_drafter import RealDrafter
 from qws.adapters.replay_drafter import ReplayDrafter
 from qws.adapters.store import Store
+from qws.config import (
+    DEFAULT_DB_PATH,
+    REPLAY_PATH,
+    REPO_DIR,
+    SEED_PATH,
+    drafter_config,
+)
 from qws.core import rules
 from qws.core.models import LoadIssue, QuestionView
 from qws.services import seed_loader
@@ -23,11 +30,7 @@ from qws.services.draft_service import (
     UnknownQuestion,
 )
 
-REPO_DIR = Path(__file__).resolve().parents[4]
 DIST_DIR = REPO_DIR / "frontend" / "dist"
-SEED_PATH = REPO_DIR / "data" / "seed.json"
-DEFAULT_DB_PATH = "qws.db"
-MODEL_SETTINGS: dict[str, int | float | str] = {"temperature": 0, "max_tokens": 1000}
 
 
 class QuestionSummary(BaseModel):
@@ -44,11 +47,11 @@ class LazyStaticFiles(StaticFiles):
         pass
 
 
-def drafter_from_env(config: DrafterConfig) -> Drafter:
+def drafter_from_env(config: DrafterConfig, replay_path: Path = REPLAY_PATH) -> Drafter:
     """`MODEL_MODE=real` asks the model; anything else (empty too) is replay."""
     if os.environ.get("MODEL_MODE") == "real":
         return RealDrafter(config.model, os.environ.get("OPENAI_API_KEY", ""), config.settings)
-    return ReplayDrafter(config.model, config.settings)
+    return ReplayDrafter(config.model, config.settings, replay_path)
 
 
 def create_app(
@@ -56,6 +59,7 @@ def create_app(
     db_path: Path | str | None = None,
     seed_path: Path = SEED_PATH,
     drafter: Drafter | None = None,
+    replay_path: Path = REPLAY_PATH,
 ) -> FastAPI:
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
@@ -63,8 +67,10 @@ def create_app(
         store.init_schema()
         app.state.store = store
         app.state.load_issues = seed_loader.load(json.loads(seed_path.read_text()), store)
-        config = DrafterConfig(os.environ.get("MODEL_NAME", ""), MODEL_SETTINGS)
-        app.state.service = DraftService(store, drafter or drafter_from_env(config), config)
+        config = drafter_config()
+        app.state.service = DraftService(
+            store, drafter or drafter_from_env(config, replay_path), config
+        )
         yield
 
     app = FastAPI(lifespan=lifespan)

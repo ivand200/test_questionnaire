@@ -1,4 +1,4 @@
-.PHONY: dev dev-api dev-web test types
+.PHONY: dev dev-api dev-web test types record
 
 dev:
 	$(MAKE) -j2 dev-api dev-web
@@ -20,3 +20,7 @@ types:
 	if [ $$status -eq 0 ]; then (cd frontend && pnpm exec openapi-typescript openapi.tmp.json -o src/api/api.d.ts); status=$$?; fi; \
 	rm -f frontend/openapi.tmp.json; \
 	exit $$status
+
+# Real model calls for the recording list; needs OPENAI_API_KEY (from the shell or .env).
+record:
+	cd backend && set -a && { [ ! -f ../.env ] || . ../.env; } && set +a && uv run python -m qws.services.recorder
