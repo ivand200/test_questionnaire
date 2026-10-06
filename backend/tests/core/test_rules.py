@@ -7,6 +7,7 @@ from qws.core.rules import (
     question_hash,
     question_status,
     source_versions,
+    summary_counts,
     superseded_evidence,
 )
 
@@ -114,3 +115,17 @@ def test_source_versions_has_only_cited_documents_never_replaced_ones():
 
     # THEN only EXPORT-v2 is in it
     assert snapshot == {"EXPORT-v2": 2}
+
+
+def test_summary_counts_answered_is_draft_plus_approved():
+    # spec: 5.1-b
+    # GIVEN statuses of 9 questions
+    statuses = ["approved"] + ["draft"] * 6 + ["unresolved", "error"]
+
+    # WHEN the counts are made
+    counts = summary_counts(statuses)
+
+    # THEN each status is counted and answered is 7
+    assert counts.model_dump() == {
+        "new": 0, "draft": 6, "unresolved": 1, "approved": 1, "error": 1, "answered": 7,
+    }

@@ -55,6 +55,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Summary */
+        get: operations["summary_api_summary_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/questions/{question_id}": {
         parameters: {
             query?: never;
@@ -261,6 +278,21 @@ export interface components {
             /** Asked */
             asked: string[];
         };
+        /** SummaryCounts */
+        SummaryCounts: {
+            /** New */
+            new: number;
+            /** Draft */
+            draft: number;
+            /** Unresolved */
+            unresolved: number;
+            /** Approved */
+            approved: number;
+            /** Error */
+            error: number;
+            /** Answered */
+            answered: number;
+        };
         /** ValidationError */
         ValidationError: {
             /** Location */
@@ -339,7 +371,9 @@ export interface operations {
     };
     questions_api_questions_get: {
         parameters: {
-            query?: never;
+            query?: {
+                status?: ("new" | "draft" | "unresolved" | "approved" | "error") | null;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -353,6 +387,35 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["QuestionSummary"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    summary_api_summary_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SummaryCounts"];
                 };
             };
         };

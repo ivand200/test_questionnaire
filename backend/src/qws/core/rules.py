@@ -15,6 +15,7 @@ from qws.core.models import (
     ReplacedEvidence,
     Reply,
     Status,
+    SummaryCounts,
     Warning,
 )
 
@@ -49,6 +50,12 @@ _ALLOWED_ACTIONS: dict[Status, list[Action]] = {
 
 def allowed_actions(status: Status) -> list[Action]:
     return list(_ALLOWED_ACTIONS[status])
+
+
+def summary_counts(statuses: list[Status]) -> SummaryCounts:
+    """The count of each status, and `answered` = draft + approved."""
+    count = {s: statuses.count(s) for s in _ALLOWED_ACTIONS}
+    return SummaryCounts(**count, answered=count["draft"] + count["approved"])
 
 
 def source_versions(

@@ -17,6 +17,8 @@ from qws.core.models import (
     QuestionRow,
     QuestionSummary,
     QuestionView,
+    Status,
+    SummaryCounts,
 )
 
 SCHEMA_PATH = Path(__file__).resolve().parents[3] / "schema.sql"
@@ -75,8 +77,8 @@ class Store:
                 [q.model_dump() for q in questions],
             )
 
-    def list_questions(self) -> list[QuestionSummary]:
-        """Every question in Seed order with its status."""
+    def list_questions(self, status: Status | None = None) -> list[QuestionSummary]:
+        """Every question in Seed order with its status; only those with `status` when it is set."""
         with self._connect() as conn:
             rows = conn.execute(
                 "SELECT q.id, q.topic, q.text, d.status AS draft_status,"
@@ -85,12 +87,20 @@ class Store:
                 " LEFT JOIN approved_answer a ON a.question_hash = q.question_hash"
                 " ORDER BY q.rowid"
             ).fetchall()
-        return [
+        found = [
             QuestionSummary(
-                id=r["id"], topic=r["topic"], text=r["text"], status=rules.question_status(bool(r["has_approval"]), r["draft_status"]),
+                id=r["id"],
+                topic=r["topic"],
+                text=r["text"],
+                status=rules.question_status(bool(r["has_approval"]), r["draft_status"]),
             )
             for r in rows
         ]
+        return [q for q in found if status is None or q.status == status]
+
+    def summary(self) -> SummaryCounts:
+        """The count of questions per computed status."""
+        return rules.summary_counts([q.status for q in self.list_questions()])
 
     def get_question_view(self, question_id: str) -> QuestionView | None:
         """The question with its status, draft, error message and allowed actions."""

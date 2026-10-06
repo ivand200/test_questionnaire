@@ -36,6 +36,7 @@ export function ReviewPanel({ questionId }: { questionId: string }) {
     onSuccess: (data) => {
       queryClient.setQueryData(queryKey, data);
       void queryClient.invalidateQueries({ queryKey: ["questions"] });
+      void queryClient.invalidateQueries({ queryKey: ["summary"] });
     },
   });
 
@@ -54,6 +55,7 @@ export function ReviewPanel({ questionId }: { questionId: string }) {
     onSuccess: (data) => {
       queryClient.setQueryData(queryKey, data);
       void queryClient.invalidateQueries({ queryKey: ["questions"] });
+      void queryClient.invalidateQueries({ queryKey: ["summary"] });
       setEditing(false);
     },
   });
@@ -71,6 +73,7 @@ export function ReviewPanel({ questionId }: { questionId: string }) {
     onSuccess: (data) => {
       queryClient.setQueryData(queryKey, data);
       void queryClient.invalidateQueries({ queryKey: ["questions"] });
+      void queryClient.invalidateQueries({ queryKey: ["summary"] });
     },
   });
 
@@ -88,6 +91,7 @@ export function ReviewPanel({ questionId }: { questionId: string }) {
     onSuccess: (data) => {
       queryClient.setQueryData(queryKey, data);
       void queryClient.invalidateQueries({ queryKey: ["questions"] });
+      void queryClient.invalidateQueries({ queryKey: ["summary"] });
       setNoteText("");
     },
   });

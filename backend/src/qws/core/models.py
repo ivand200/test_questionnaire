@@ -168,6 +168,15 @@ class QuestionSummary(BaseModel):
     status: Status
 
 
+class SummaryCounts(BaseModel):
+    new: int
+    draft: int
+    unresolved: int
+    approved: int
+    error: int
+    answered: int  # draft + approved
+
+
 class RunAllResult(BaseModel):
     asked: list[str]
 

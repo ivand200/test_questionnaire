@@ -16,7 +16,7 @@ from qws.config import (
     drafter_config,
     open_store,
 )
-from qws.core.models import ApproveRequest, EditRequest, LeaveOpenRequest, LoadIssue, QuestionSummary, QuestionView, RunAllResult
+from qws.core.models import ApproveRequest, EditRequest, LeaveOpenRequest, LoadIssue, QuestionSummary, QuestionView, RunAllResult, Status, SummaryCounts
 from qws.services.draft_service import (
     Conflict,
     DraftService,
@@ -73,8 +73,12 @@ def create_app(
         return request.app.state.load_issues
 
     @app.get("/api/questions")
-    def questions(request: Request) -> list[QuestionSummary]:
-        return request.app.state.store.list_questions()
+    def questions(request: Request, status: Status | None = None) -> list[QuestionSummary]:
+        return request.app.state.store.list_questions(status)
+
+    @app.get("/api/summary")
+    def summary(request: Request) -> SummaryCounts:
+        return request.app.state.store.summary()
 
     @app.get("/api/questions/{question_id}")
     def question(question_id: str, request: Request) -> QuestionView:
