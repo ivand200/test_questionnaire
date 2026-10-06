@@ -1,0 +1,25 @@
+[project]
+name = "qws"
+version = "0.1.0"
+description = "Questionnaire evidence and review workspace"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.30",
+]
+
+[dependency-groups]
+dev = [
+    "httpx>=0.27",
+    "pytest>=8",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/qws"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

@@ -1,0 +1,11 @@
+.env
+AGENTS.md
+.notes/
+tasks/
+.DS_Store
+node_modules
+.venv
+dist
+__pycache__/
+.pytest_cache/
+*.pyc
