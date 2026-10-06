@@ -9,6 +9,7 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 
 import { HomePage } from "./pages/HomePage";
+import { QuestionPage } from "./pages/QuestionPage";
 
 const rootRoute = createRootRoute();
 const indexRoute = createRoute({
@@ -16,7 +17,14 @@ const indexRoute = createRoute({
   path: "/",
   component: HomePage,
 });
-const router = createRouter({ routeTree: rootRoute.addChildren([indexRoute]) });
+const questionRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/questions/$questionId",
+  component: QuestionPage,
+});
+const router = createRouter({
+  routeTree: rootRoute.addChildren([indexRoute, questionRoute]),
+});
 
 declare module "@tanstack/react-router" {
   interface Register {

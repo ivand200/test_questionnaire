@@ -55,10 +55,56 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/questions/{question_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Question */
+        get: operations["question_api_questions__question_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/questions/{question_id}/draft": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Draft */
+        post: operations["draft_api_questions__question_id__draft_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** Citation */
+        Citation: {
+            /** Passage Id */
+            passage_id: string;
+            /** Excerpt */
+            excerpt: string;
+        };
+        /** HTTPValidationError */
+        HTTPValidationError: {
+            /** Detail */
+            detail?: components["schemas"]["ValidationError"][];
+        };
         /** LoadIssue */
         LoadIssue: {
             /**
@@ -84,6 +130,55 @@ export interface components {
              * @enum {string}
              */
             status: "new" | "draft" | "unresolved" | "error";
+        };
+        /** QuestionView */
+        QuestionView: {
+            /** Id */
+            id: string;
+            /** Topic */
+            topic: string;
+            /** Text */
+            text: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "new" | "draft" | "unresolved" | "error";
+            /** Answer */
+            answer: string | null;
+            /** Citations */
+            citations: components["schemas"]["Citation"][];
+            /** Warnings */
+            warnings: components["schemas"]["Warning"][];
+            /** Error */
+            error: string | null;
+            /** Allowed Actions */
+            allowed_actions: ("generate" | "retry")[];
+        };
+        /** ValidationError */
+        ValidationError: {
+            /** Location */
+            loc: (string | number)[];
+            /** Message */
+            msg: string;
+            /** Error Type */
+            type: string;
+            /** Input */
+            input?: unknown;
+            /** Context */
+            ctx?: Record<string, never>;
+        };
+        /** Warning */
+        Warning: {
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "citation_not_found" | "no_citation";
+            /** Passage Id */
+            passage_id?: string | null;
+            /** Message */
+            message: string;
         };
     };
     responses: never;
@@ -152,6 +247,68 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["QuestionSummary"][];
+                };
+            };
+        };
+    };
+    question_api_questions__question_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                question_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["QuestionView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    draft_api_questions__question_id__draft_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                question_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["QuestionView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
