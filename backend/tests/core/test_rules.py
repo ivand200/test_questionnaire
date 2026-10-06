@@ -1,6 +1,6 @@
 import hashlib
 
-from qws.core.models import Citation, DocumentRow, PassageRow, QuestionRow
+from qws.core.models import Citation, DocumentRow, PassageRow, QuestionRow, SupportReply
 from qws.core.rules import (
     SYSTEM_PROMPT,
     allowed_actions,
@@ -12,6 +12,7 @@ from qws.core.rules import (
     source_versions,
     summary_counts,
     superseded_evidence,
+    support_warning,
 )
 
 
@@ -193,3 +194,28 @@ def test_the_support_prompt_holds_the_answer_and_the_excerpts_and_its_hash_follo
     assert prompt.input_hash != build_support_prompt("Is it A?", "No.", cited, "m1", settings).input_hash
     assert prompt.input_hash != build_support_prompt("Is it A?", "Yes, A.", cited, "m2", settings).input_hash
     assert prompt.input_hash != build_support_prompt("Is it A?", "Yes, A.", cited, "m1", {"temperature": 1}).input_hash
+
+
+def test_support_warning_is_none_for_supports_and_one_warning_otherwise():
+    # spec: 2.1-a, 2.1-c, 2.2 (p5)
+    # GIVEN the three results of a Support reply, and a failed judge call
+    # WHEN the warning is built
+    supports = support_warning(SupportReply(result="supports", reason="Ok."), None)
+    contradicts = support_warning(SupportReply(result="contradicts", reason="It says no."), None)
+    unclear = support_warning(SupportReply(result="unclear", reason="Not named."), None)
+    failed = support_warning(None, "Model call failed: timeout.")
+
+    # THEN supports gives none; the others give their kind and message; a failure has no passage ID
+    assert supports is None
+    assert (contradicts.kind, contradicts.message) == (
+        "support_check",
+        "Support check (model draft): the cited passages contradict this answer. It says no.",
+    )
+    assert unclear.message == (
+        "Support check (model draft): the cited passages do not clearly support this answer. Not named."
+    )
+    assert (failed.kind, failed.message, failed.passage_id) == (
+        "support_check_failed",
+        "Support check (model draft): the check did not run. Model call failed: timeout.",
+        None,
+    )

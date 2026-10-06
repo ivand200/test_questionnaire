@@ -16,6 +16,7 @@ from qws.core.models import (
     Reply,
     Status,
     SummaryCounts,
+    SupportReply,
     ViewCitation,
     Warning,
 )
@@ -229,6 +230,26 @@ def build_support_prompt(
         passage_ids=[c.passage_id for c in citations],
         input_hash=hashlib.sha256(canonical.encode()).hexdigest(),
     )
+
+
+def support_warning(reply: SupportReply | None, error: str | None) -> Warning | None:
+    """The warning for the result of the support check: none for `supports`."""
+    prefix = "Support check (model draft): "
+    if reply is None:
+        return Warning(
+            kind="support_check_failed", message=f"{prefix}the check did not run. {error or ''}".strip()
+        )
+    if reply.result == "contradicts":
+        return Warning(
+            kind="support_check",
+            message=f"{prefix}the cited passages contradict this answer. {reply.reason}",
+        )
+    if reply.result == "unclear":
+        return Warning(
+            kind="support_check",
+            message=f"{prefix}the cited passages do not clearly support this answer. {reply.reason}",
+        )
+    return None
 
 
 def check_reply(reply: Reply, passages: list[PassageRow]) -> Checked:

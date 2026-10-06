@@ -2,7 +2,8 @@
 
 import json
 
-from conftest import call_count, draft_row
+from conftest import REPLAY_PATH, call_count, draft_row
+from conftest import make_client as replay_client
 from test_draft_api import Q1_REPLY, FakeDrafter, db_rows, failed, make_client, ok, reply_json
 
 Q3_ANSWER = "Email support is available Monday to Friday, 09:00 to 17:00 UTC."
@@ -115,25 +116,87 @@ def test_edit_approve_and_a_repeated_ask_make_no_drafter_call(tmp_path):
     assert len(drafter.judge_prompts) == 1
 
 
-def test_a_judge_failure_is_saved_and_changes_nothing_yet(tmp_path):
-    # spec: 1.1, 2.2 (the warning comes in ticket 4)
-    # GIVEN the judge times out
-    judge_error = failed("Model call failed: timeout.")
-    drafter = FakeDrafter(ok(Q3_REPLY), judge_replies=[judge_error])
-    with make_client(tmp_path, drafter) as client:
-        # WHEN the client asks for a draft of Q3
-        body = client.post("/api/questions/Q3/draft").json()
+# Q10 comes in ticket 5. Until then Q1 stands in for it: its draft cites EXPORT-v2:p1, which
+# replaces EXPORT-v1:p1, so the view also holds a `superseded` warning.
+CONTRADICTS = json.dumps(
+    {"result": "contradicts", "reason": "The passage says free-plan users cannot export CSV."}
+)
+UNCLEAR = json.dumps({"result": "unclear", "reason": "The passage does not name the plan."})
+LYING = reply_json(answer="Yes. Free-plan users can export CSV.", citations=["EXPORT-v2:p1"])
+ACTIONS = ["edit", "approve", "leave_open"]
 
-    # THEN the draft is a normal draft; the second model call keeps the error and no raw reply
+
+def warning_kinds(body: dict) -> list[str]:
+    return [w["kind"] for w in body["warnings"]]
+
+
+def test_a_contradicting_judge_adds_one_warning_and_keeps_the_draft_status(tmp_path):
+    # spec: 2.1-a
+    # GIVEN a fake Drafter whose Q1 draft cites EXPORT-v2:p1 and whose judge says contradicts
+    drafter = FakeDrafter(ok(LYING), judge_replies=[ok(CONTRADICTS)])
+    with make_client(tmp_path, drafter) as client:
+        # WHEN the client sends POST /api/questions/Q1/draft
+        response = client.post("/api/questions/Q1/draft")
+
+    # THEN status draft; kinds support_check then superseded; the exact message; the draft actions;
+    # the draft row holds one support_check warning and no superseded warning
+    assert response.status_code == 200
+    body = response.json()
     assert body["status"] == "draft"
-    assert body["warnings"] == []
-    first, second = db_rows(tmp_path, "model_call")
+    assert body["answer"] == "Yes. Free-plan users can export CSV."
+    assert warning_kinds(body) == ["support_check", "superseded"]
+    assert body["warnings"][0]["message"] == (
+        "Support check (model draft): the cited passages contradict this answer. "
+        "The passage says free-plan users cannot export CSV."
+    )
+    assert body["allowed_actions"] == ACTIONS
+    saved = json.loads(draft_row(tmp_path, "Q1")["warnings"])
+    assert [w["kind"] for w in saved] == ["support_check"]
+
+
+def test_an_unclear_judge_gives_the_do_not_clearly_support_message(tmp_path):
+    # spec: 2.1-c
+    # GIVEN as 2.1-a, but the judge says unclear
+    drafter = FakeDrafter(ok(LYING), judge_replies=[ok(UNCLEAR)])
+    with make_client(tmp_path, drafter) as client:
+        # WHEN the client sends POST /api/questions/Q1/draft
+        body = client.post("/api/questions/Q1/draft").json()
+
+    # THEN the message is the unclear one and the status is draft
+    assert body["status"] == "draft"
+    assert body["warnings"][0]["kind"] == "support_check"
+    assert body["warnings"][0]["message"] == (
+        "Support check (model draft): the cited passages do not clearly support this answer. "
+        "The passage does not name the plan."
+    )
+
+
+def test_a_judge_timeout_gives_a_failed_warning_and_approve_still_works(tmp_path):
+    # spec: 2.2-a
+    # GIVEN as 2.1-a, but the judge call returns the timeout error
+    drafter = FakeDrafter(ok(LYING), judge_replies=[failed("Model call failed: timeout.")])
+    with make_client(tmp_path, drafter) as client:
+        # WHEN the client asks for a draft, then approves it
+        body = client.post("/api/questions/Q1/draft").json()
+        approved = client.post("/api/questions/Q1/approve", json={"approver": "Anna"})
+
+    # THEN one support_check_failed warning with that error; the second call keeps the error and no
+    # raw reply; the actions include approve; the approve call gives status approved
+    assert body["status"] == "draft"
+    support = [w for w in body["warnings"] if w["kind"].startswith("support_check")]
+    assert [w["kind"] for w in support] == ["support_check_failed"]
+    assert support[0]["message"] == (
+        "Support check (model draft): the check did not run. Model call failed: timeout."
+    )
+    assert "approve" in body["allowed_actions"]
+    _, second = db_rows(tmp_path, "model_call")
     assert second["error"] == "Model call failed: timeout."
     assert second["raw_response"] is None
-    assert first["error"] is None
+    assert approved.status_code == 200
+    assert approved.json()["status"] == "approved"
 
 
-def test_a_judge_reply_that_is_not_valid_is_saved_with_its_raw_text_and_an_error(tmp_path):
+def test_a_judge_reply_that_is_not_valid_gives_a_failed_warning_and_keeps_the_raw_text(tmp_path):
     # spec: 2.2-b
     # GIVEN the judge replies with text that is not a Support reply
     drafter = FakeDrafter(ok(Q3_REPLY), judge_replies=[ok("not json")])
@@ -141,8 +204,53 @@ def test_a_judge_reply_that_is_not_valid_is_saved_with_its_raw_text_and_an_error
         # WHEN the client asks for a draft of Q3
         body = client.post("/api/questions/Q3/draft").json()
 
-    # THEN the draft is a normal draft; the second call keeps the raw text and the error
+    # THEN the message holds the short error; the second call keeps the raw text and the error
     assert body["status"] == "draft"
+    assert warning_kinds(body) == ["support_check_failed"]
+    assert body["warnings"][0]["message"] == (
+        "Support check (model draft): the check did not run. Model reply was not valid."
+    )
     _, second = db_rows(tmp_path, "model_call")
     assert second["raw_response"] == "not json"
     assert second["error"] == "Model reply was not valid."
+
+
+def test_a_replay_file_with_no_judge_entry_gives_a_failed_warning(tmp_path):
+    # spec: 2.2-c
+    # GIVEN MODEL_MODE empty; a Replay file with the draft entries and no judge entries
+    entries = [
+        e for e in json.loads(REPLAY_PATH.read_text()) if '"result"' not in (e.get("raw_response") or "")
+    ]
+    replay_path = tmp_path / "no-judge.json"
+    replay_path.write_text(json.dumps(entries))
+    with replay_client(tmp_path, replay_path) as client:
+        # WHEN the client asks for a draft of Q3
+        body = client.post("/api/questions/Q3/draft").json()
+
+    # THEN status draft; the message says the check did not run, with the replay error
+    assert body["status"] == "draft"
+    assert warning_kinds(body) == ["support_check_failed"]
+    assert body["warnings"][0]["message"] == (
+        "Support check (model draft): the check did not run. No saved response for this input."
+    )
+
+
+def test_the_support_warning_stays_after_an_edit_and_a_restart(tmp_path):
+    # spec: 2.3-a
+    # GIVEN a fake Drafter as 2.1-a; Q1 was drafted
+    drafter = FakeDrafter(ok(LYING), judge_replies=[ok(CONTRADICTS)])
+    with make_client(tmp_path, drafter) as client:
+        client.post("/api/questions/Q1/draft")
+
+        # WHEN the client edits the answer, and the app starts again on the same Database
+        answer = {"answer": "No. Free plans cannot export CSV."}
+        assert client.put("/api/questions/Q1/draft", json=answer).status_code == 200
+    with make_client(tmp_path, FakeDrafter()) as client:
+        body = client.get("/api/questions/Q1").json()
+
+    # THEN status draft, edited, the support_check warning is still listed, 2 model calls
+    assert body["status"] == "draft"
+    assert body["edited"] is True
+    assert "support_check" in warning_kinds(body)
+    assert call_count(tmp_path, "Q1") == 2
+    assert len(drafter.judge_prompts) == 1

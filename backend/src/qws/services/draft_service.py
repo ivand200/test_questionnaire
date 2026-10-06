@@ -19,6 +19,7 @@ from qws.core.models import (
     Reply,
     SupportReply,
     UnknownQuestion,
+    Warning,
 )
 
 INVALID_REPLY = "Model reply was not valid."
@@ -123,6 +124,18 @@ def ask_model(
     return Asked(made.call, checked, _model_call(question, prompt, judged, error), support)
 
 
+def _draft_warnings(asked: Asked) -> list[Warning]:
+    """The warnings of the checked draft, plus the support warning when the judge ran."""
+    if asked.checked is None:
+        return []
+    warnings = list(asked.checked.warnings)
+    if asked.judge_call is not None:
+        extra = rules.support_warning(asked.support, asked.judge_call.error)
+        if extra is not None:
+            warnings.append(extra)
+    return warnings
+
+
 class DraftService:
     def __init__(self, store: Store, drafter: Drafter, config: DrafterConfig) -> None:
         self._store = store
@@ -179,7 +192,7 @@ class DraftService:
             verdict=checked.verdict if checked else None,
             model_answer=checked.answer if checked else None,
             citations=checked.citations if checked else [],
-            warnings=checked.warnings if checked else [],
+            warnings=_draft_warnings(asked),
             model_call_id=None,
             updated_at=asked.call.created_at,
         )

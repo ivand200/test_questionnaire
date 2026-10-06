@@ -108,7 +108,14 @@ class UnknownQuestion:
 
 
 class Warning(BaseModel):
-    kind: Literal["citation_not_found", "no_citation", "superseded", "source_changed"]
+    kind: Literal[
+        "citation_not_found",
+        "no_citation",
+        "superseded",
+        "source_changed",
+        "support_check",
+        "support_check_failed",
+    ]
     passage_id: str | None = None
     message: str
     # Set for `source_changed`: the document and its approved and current versions.

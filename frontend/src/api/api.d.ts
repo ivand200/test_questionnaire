@@ -352,7 +352,7 @@ export interface components {
              * Kind
              * @enum {string}
              */
-            kind: "citation_not_found" | "no_citation" | "superseded" | "source_changed";
+            kind: "citation_not_found" | "no_citation" | "superseded" | "source_changed" | "support_check" | "support_check_failed";
             /** Passage Id */
             passage_id?: string | null;
             /** Message */
