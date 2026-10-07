@@ -5,6 +5,7 @@ import { useState } from "react";
 import { api } from "../api/client";
 import { useHealth, useSummary } from "../api/queries";
 import { ApproverContext, DEFAULT_APPROVER } from "./approver";
+import { ToastProvider } from "./toast";
 
 export function AppShell() {
   const queryClient = useQueryClient();
@@ -29,6 +30,7 @@ export function AppShell() {
 
   return (
     <ApproverContext.Provider value={approver}>
+      <ToastProvider>
       <div className="mx-auto flex max-w-7xl flex-col gap-4 px-4 py-6">
         <header className="flex flex-wrap items-end justify-between gap-3">
           <h1 className="text-2xl font-semibold">Questionnaire workspace</h1>
@@ -74,6 +76,7 @@ export function AppShell() {
         )}
         <Outlet />
       </div>
+      </ToastProvider>
     </ApproverContext.Provider>
   );
 }

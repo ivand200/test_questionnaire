@@ -23,3 +23,14 @@ export function useHealth() {
     },
   });
 }
+
+export function useDocuments() {
+  return useQuery({
+    queryKey: ["documents"],
+    queryFn: async () => {
+      const { data, error } = await api.GET("/api/documents");
+      if (error || !data) throw new Error("documents call failed");
+      return data;
+    },
+  });
+}
