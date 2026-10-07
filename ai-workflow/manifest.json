@@ -1,0 +1,159 @@
+{
+  "categories": {
+    "development_tools_and_models": {
+      "status": "used",
+      "files": [
+        "docs/llm-usage.md"
+      ],
+      "notes": "Claude Code (CLI) with the model Claude Sonnet 5.5 (as in the commit attribution) wrote the code, tests and drafts of the documents. CLI version and tool settings: not-exportable (not recorded). To confirm by the author."
+    },
+    "plugins_and_extensions": {
+      "status": "not-used",
+      "files": [],
+      "notes": "No plugin or extension shaped this work. To confirm by the author."
+    },
+    "application_models_and_parameters": {
+      "status": "used",
+      "files": [
+        "backend/src/qws/config.py",
+        "replay/responses.json",
+        ".env.example"
+      ],
+      "notes": "App model gpt-6-luna (OpenAI Responses API through PydanticAI 2.54.0). temperature 0, max_tokens 1000, openai_reasoning_effort medium, retries 0, timeout 60 s. Two calls: the draft and the support check. Each call is saved in model_call with its settings."
+    },
+    "skills": {
+      "status": "used",
+      "files": [
+        "ai-workflow/skills/"
+      ],
+      "notes": "Eight user-level skills shaped the work. See the configuration records. The author copies the skill folders into ai-workflow/skills/ before hand-in."
+    },
+    "agent_instructions_and_subagents": {
+      "status": "used",
+      "files": [],
+      "notes": "Kept outside the repository: AGENTS.md (two documentation links for the agent), the specs and ticket files (tasks/) and the design notes (.notes/). The author decides what to publish, so .gitignore lists AGENTS.md, tasks/ and .notes/. A coordinator session handed each ticket to a subagent that ran the do-work-ticket skill."
+    },
+    "hooks_and_scripts": {
+      "status": "used",
+      "files": [
+        "Makefile",
+        "backend/src/qws/services/checks.py",
+        "backend/src/qws/services/recorder.py"
+      ],
+      "notes": "Scripts: make checks, make record, make reset, make start, make types. No hook was set up. To confirm by the author."
+    },
+    "prompts_and_rules": {
+      "status": "used",
+      "files": [
+        "backend/src/qws/core/rules.py",
+        "data/domain.md",
+        "data/reference-cases.json"
+      ],
+      "notes": "SYSTEM_PROMPT and SUPPORT_SYSTEM_PROMPT are the prompts of the app. domain.md holds the supplied business rules and was not changed."
+    },
+    "tool_and_mcp_settings": {
+      "status": "not-used",
+      "files": [],
+      "notes": "No MCP server or tool setting was needed for this exercise. To confirm by the author."
+    },
+    "permissions_and_environment_names": {
+      "status": "used",
+      "files": [
+        ".env.example"
+      ],
+      "notes": "Only names are in the repository: MODEL_MODE, OPENAI_API_KEY, MODEL_NAME, DB_PATH. The .env file is ignored by Git. Claude Code permission settings: default, not exported."
+    }
+  },
+  "configuration_records": [
+    {
+      "name": "grilling",
+      "category": "skills",
+      "purpose": "Question the plan of each part before the spec was written.",
+      "original_path_or_scope": "user-level skill (~/.claude/skills/grilling/)",
+      "saved_path": "ai-workflow/skills/grilling/",
+      "version_or_commit": "user-level skill, no version; the author copies the folder before hand-in",
+      "used_during": "Before each part (S0, P1 to P6)",
+      "status": "used",
+      "redactions": []
+    },
+    {
+      "name": "spec-blueprint",
+      "category": "skills",
+      "purpose": "Write spec.md with requirements, examples and the design of each part.",
+      "original_path_or_scope": "user-level skill (~/.claude/skills/spec-blueprint/)",
+      "saved_path": "ai-workflow/skills/spec-blueprint/",
+      "version_or_commit": "user-level skill, no version; the author copies the folder before hand-in",
+      "used_during": "Before each part",
+      "status": "used",
+      "redactions": []
+    },
+    {
+      "name": "to-tickets",
+      "category": "skills",
+      "purpose": "Split each spec into tickets in tickets-*.md.",
+      "original_path_or_scope": "user-level skill (~/.claude/skills/to-tickets/)",
+      "saved_path": "ai-workflow/skills/to-tickets/",
+      "version_or_commit": "user-level skill, no version; the author copies the folder before hand-in",
+      "used_during": "Before each part",
+      "status": "used",
+      "redactions": []
+    },
+    {
+      "name": "do-work-ticket",
+      "category": "skills",
+      "purpose": "Implement one ticket, or fix review findings, with one commit.",
+      "original_path_or_scope": "user-level skill (~/.claude/skills/do-work-ticket/)",
+      "saved_path": "ai-workflow/skills/do-work-ticket/",
+      "version_or_commit": "user-level skill, no version; the author copies the folder before hand-in",
+      "used_during": "Every ticket commit",
+      "status": "used",
+      "redactions": []
+    },
+    {
+      "name": "bdd-tests",
+      "category": "skills",
+      "purpose": "Write backend tests with GIVEN/WHEN/THEN comments and spec tags.",
+      "original_path_or_scope": "user-level skill (~/.claude/skills/bdd-tests/)",
+      "saved_path": "ai-workflow/skills/bdd-tests/",
+      "version_or_commit": "user-level skill, no version; the author copies the folder before hand-in",
+      "used_during": "Every backend ticket",
+      "status": "used",
+      "redactions": []
+    },
+    {
+      "name": "code-review",
+      "category": "skills",
+      "purpose": "Review a ticket range against the spec and the standards.",
+      "original_path_or_scope": "user-level skill (~/.claude/skills/code-review/)",
+      "saved_path": "ai-workflow/skills/code-review/",
+      "version_or_commit": "user-level skill, no version; the author copies the folder before hand-in",
+      "used_during": "The review fixes commits",
+      "status": "used",
+      "redactions": []
+    },
+    {
+      "name": "prototype",
+      "category": "skills",
+      "purpose": "Build the throwaway Inbox prototype that the screen follows.",
+      "original_path_or_scope": "user-level skill (~/.claude/skills/prototype/)",
+      "saved_path": "ai-workflow/skills/prototype/",
+      "version_or_commit": "user-level skill, no version; the author copies the folder before hand-in",
+      "used_during": "Before Part 6",
+      "status": "used",
+      "redactions": []
+    },
+    {
+      "name": "qa-notes",
+      "category": "skills",
+      "purpose": "Prove the critical examples and write qa-report.md.",
+      "original_path_or_scope": "user-level skill (~/.claude/skills/qa-notes/)",
+      "saved_path": "ai-workflow/skills/qa-notes/",
+      "version_or_commit": "user-level skill, no version; the author copies the folder before hand-in",
+      "used_during": "After each part",
+      "status": "used",
+      "redactions": []
+    }
+  ],
+  "replay_command": "make start (replay is the default; make checks proves the six cases with no key)",
+  "workflow_example_path": "docs/llm-usage.md"
+}
