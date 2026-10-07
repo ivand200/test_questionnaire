@@ -28,14 +28,14 @@ Plugins and extensions: `not-used`. MCP and tool settings: `not-used`. Hooks: no
 | Category | Status | Where |
 | -------- | ------ | ----- |
 | Skills | `used` | `ai-workflow/skills/<name>/` for each record in `manifest.json` |
-| Agent instructions and subagents | `used`, kept outside the repository | `AGENTS.md`, `tasks/` (specs and tickets), `.notes/` (design notes) |
+| Agent instructions and subagents | `used`, not shared | kept outside the repository |
 | Prompts and rules | `used` | `backend/src/qws/core/rules.py`, `data/domain.md`, `data/reference-cases.json` |
 | Scripts | `used` | `Makefile`, `backend/src/qws/checks.py`, `backend/src/qws/services/recorder.py` |
 | Environment names | `used` | `.env.example` (names only) |
 
-Skills: nine user-level skills shaped the work: `grilling`, `spec-blueprint`, `to-tickets`, `do-work-ticket`, `bdd-tests`, `code-review`, `prototype`, `qa-notes` and `daisyui` (the Part 6 Frontend). The record of each skill points to `ai-workflow/skills/<name>/`. The author copies and trims these folders before hand-in; the repository has no copy yet. The list comes from the commit history and the files in `tasks/`. To confirm by the author.
+Skills: eight user-level skills are shared, copied unchanged into `ai-workflow/skills/<name>/`: `grilling`, `spec-blueprint`, `to-tickets`, `do-work-ticket`, `do-work-agents`, `bdd-tests`, `code-review` and `daisyui` (the Part 6 Frontend). No other skill is shared. To restore them, copy the folders into `~/.claude/skills/`.
 
-Agent instructions and specs: kept outside the repository. The author decides what to publish, so `.gitignore` lists `AGENTS.md`, `tasks/` and `.notes/`. `AGENTS.md` has two links to documentation for the agent. A coordinator session handed each ticket to a subagent that ran the `do-work-ticket` skill.
+Agent instructions, specs and design notes: not shared. They stay outside the repository and `.gitignore` lists them. A coordinator session handed each ticket to a subagent that ran the `do-work-ticket` skill.
 
 Redactions: none. No credential, token or private URL is in this folder. The `.env` file is not in the repository.
 

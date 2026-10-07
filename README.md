@@ -2,7 +2,20 @@
 
 A small local web app. A sales team gets buyer questions. The app drafts each answer from the company documents, shows the proof, and lets a person edit and approve it. An approved answer is reused when the same question comes again. If a source document changes, the approved answer goes back to review.
 
+![Q1: the older policy conflict, the current answer and the replaced text](docs/screenshots/02-q1-conflict.png)
+
 All people, companies and policies in the data are fictional.
+
+## Highlights
+
+- **Code sets every status. The model never does.** The model returns an answer, a verdict and passage IDs. Code checks each ID against the passages that were sent and copies the passage text as the excerpt.
+- **Support check.** After a good draft, a second model call asks whether the cited text supports the answer. It adds a warning only: the status stays `draft` and Approve stays on, because a wrong flag must not block a good answer. Demo with no key: Q10 is a simulated draft that says "Yes" and cites a passage that says the opposite, and the check flags it. Q3 gets no warning.
+- **Authority comes from `supersedes`, never from a date.** Passages of a replaced document are not sent to the model. The reviewer still sees them, struck through, next to the current answer (Q1).
+- **Reuse and source change.** An approved answer is reused with no model call. Each approval saves the source versions it cites. If one changes, the answer shows `needs review` and is not reused until it is approved again.
+- **Every model call is saved once**, with prompt, raw reply, model, settings, latency and token counts, and a label: `real`, `cached` or `simulated`. Failures show as `error` with a short message, and the other questions go on.
+- **No key needed.** The app and `make checks` replay saved real replies.
+
+![Q10: the support check warns that the cited passage contradicts the draft "Yes"](docs/screenshots/05-q10-support-check.png)
 
 ## Setup and run
 
@@ -17,21 +30,21 @@ make start                     # build the Frontend, serve everything on http://
 
 | Command | What it does |
 | ------- | ------------ |
-| `make start` | Builds the Frontend and starts the Backend on port 8000. It serves `/api/*` and the built Frontend. Replay mode unless `MODEL_MODE=real`. |
-| `make checks` | Runs the five checks and Case 6 in replay mode, with no key. Prints one line for each case and writes `docs/check-results.md`. Exit code 0 when all pass, 1 when a case fails, 2 when `data/reference-cases.json` is not valid. |
-| `make reset` | Deletes the Database file and its `-wal` and `-shm` files (`DB_PATH`, else `backend/qws.db`). Use it for a clean demo. |
+| `make start` | Builds the Frontend and starts the Backend on port 8000 (`/api/*` and the built Frontend). Replay mode unless `MODEL_MODE=real`. |
+| `make checks` | Runs the five checks and Case 6 in replay mode and writes `docs/check-results.md`. Exit code 0 when all pass, 1 when a case fails, 2 when `data/reference-cases.json` is not valid. |
+| `make reset` | Deletes the Database file for a clean demo. |
 | `make test` | `tsc`, `vite build` and `pytest`. |
 | `make record` | Real model calls for the replay file. Needs `OPENAI_API_KEY`. Not needed to run the app. |
-| `make types` | Regenerates `frontend/src/api/api.d.ts` from the Backend OpenAPI schema. |
-| `make dev` | Backend with reload on port 8000 and the Vite dev server on port 5173. |
+
+`make dev` (Backend with reload plus the Vite dev server on port 5173) and `make types` (regenerate `frontend/src/api/api.d.ts`) are for development.
 
 ## Replay without a key
 
-The app needs no API key. With no `MODEL_MODE` set, the Drafter reads saved real model replies from `replay/responses.json`. The label of such a call is `cached`. A failure that was made on purpose has the label `simulated`. A call to the real model has the label `real`.
+With no `MODEL_MODE` set, the Drafter reads saved real model replies from `replay/responses.json`. The label of such a call is `cached`. A failure made on purpose has the label `simulated`. A call to the real model has the label `real`.
 
-A replay entry is found by `input_hash`. The hash covers the model name, the model settings, the system prompt, the question text and the passages that were sent. If one of them changes, the entry is not found and the question gets the status `error` with "No saved response for this input.". Run `make record` with a key to save new replies. Never edit `replay/responses.json` by hand.
+A replay entry is found by `input_hash`, which covers the model name, the settings, the system prompt, the question text and the passages that were sent. If one of them changes, the question gets the status `error` with "No saved response for this input." until `make record` saves new replies. Never edit `replay/responses.json` by hand.
 
-To use the real model, copy `.env.example` to `.env`, fill in the names, and start with `MODEL_MODE=real`.
+To use the real model, copy `.env.example` to `.env`, fill in the values, and start with `MODEL_MODE=real`.
 
 | Name | Use |
 | ---- | --- |
@@ -56,11 +69,8 @@ backend/src/qws
 
 - All business logic is in the Backend. The Frontend shows what the Backend sends, including `allowed_actions`.
 - The `Drafter` is a port. `RealDrafter` uses a PydanticAI `Agent` with OpenAI. `ReplayDrafter` reads the replay file. Both go through the same validation, so replay tests the same checks.
-- Storage is SQLite with plain SQL in `backend/schema.sql`: `document`, `passage`, `owner`, `question`, `model_call`, `draft`, `approved_answer`. A model call is written once and never changed. Model output (`draft`) and approved answers are in different tables. Code sets every status. The model never does.
+- Storage is SQLite with plain SQL in `backend/schema.sql`: `document`, `passage`, `owner`, `question`, `model_call`, `draft`, `approved_answer`. A model call is written once and never changed. Model output (`draft`) and approved answers are in different tables.
 - The status `needs review`, the owner, and the replaced text are computed when they are read. They are not stored.
-- Each approval saves the source versions it cites, for example `{"EXPORT-v2": 2}`.
-
-Main routes (base `/api`): `GET /health`, `GET /summary`, `GET /questions`, `GET /questions/{id}`, `POST /questions/{id}/draft`, `PUT /questions/{id}/draft`, `POST /questions/{id}/approve`, `POST /questions/{id}/leave-open`, `POST /questionnaire/run`, `GET /documents`, `POST /documents/{id}/bump-version`, `GET /load-issues`.
 
 ## Workflow
 
@@ -128,18 +138,18 @@ Code loads the data once, at start. Then each question goes through four steps. 
  Model fails (simulated Q9) → ERROR, the other questions go on        [Case 6]
 ```
 
-`make checks` runs these cases:
+`make checks` runs the five checks and Case 6 in replay mode:
 
-| Case | Question | What it proves |
-| ---- | -------- | -------------- |
-| C1 | Q3 | A supported question gets a draft. The cited passage exists. |
-| C2 | Q2 | An undocumented feature stays `unresolved`, with an owner and no invented answer. |
-| C3 | Q1 | The older policy conflict is visible. The answer cites the document that supersedes it. |
-| C4 | Q1 | An edit alone is not reused. After Approve, asking again makes no model call. |
-| C5 | Q1 | After a restart, approval and evidence stay. After a bump of `EXPORT-v2`, the answer needs review with no model call. |
-| C6 | Q9 | A failed model call shows as `error`, label `simulated`, and Run all goes on with the other questions. |
+| Case | Question | Checks |
+| ---- | -------- | ------ |
+| C1 | Q3 | A supported question gets a draft with a real citation |
+| C2 | Q2 | An undocumented feature stays `unresolved`, with an owner |
+| C3 | Q1 | The older policy conflict is shown, and the answer cites the replacing document |
+| C4 | Q1 | An edit is not reused. After Approve, asking again makes no model call |
+| C5 | Q1 | Approval survives a restart. After a bump of `EXPORT-v2`, the answer needs review |
+| C6 | Q9 | A failed call shows as `error`, label `simulated`. The other questions go on |
 
-The expected values are in `data/reference-cases.json`, each with a `source` note. The runner reads expected values only from that file. The latest table is in `docs/check-results.md`.
+The expected values are in `data/reference-cases.json`, each with a `source` note. The latest table is in `docs/check-results.md`.
 
 ## Two status words
 
@@ -157,47 +167,26 @@ The expected values are in `data/reference-cases.json`, each with a `source` not
 | Agent | `retries=0`, no tools. Our code decides when to ask again. Timeout 60 seconds, no client retries |
 | Prompts | `SYSTEM_PROMPT` and `SUPPORT_SYSTEM_PROMPT` in `backend/src/qws/core/rules.py`. Passages go in the user message, as data |
 
-Each model call is saved with its prompt, raw reply, model, settings, latency and tokens (`NULL` for `cached` and `simulated`). Errors show as a short message, never a stack trace or a key.
+Each model call is saved with its prompt, raw reply, model, settings, latency and token counts. Latency and tokens are measured on `real` calls only. They are `NULL` for `cached` and `simulated` calls, and the screen does not show them. Errors show as a short message, never a stack trace or a key.
 
 ## Data assumptions
 
-- `data/seed.json` has 5 documents (`EXPORT-v1`, `EXPORT-v2`, `SUPPORT-v1`, `ACCESS-v1`, `BILLING-v1`), 8 questions (Q1 to Q8) and the topic-to-reviewer map. The app never changes it.
-- `data/demo.json` adds two questions after the seed ones. Q9 (support) has a simulated failure for Case 6. Q10 (exports) has a simulated draft that says "Yes" and cites a passage that says the opposite, so the support check can catch it.
-- `data/domain.md` and `data/expected-seed-results.json` are copies of the supplied files, with no change.
-- Authority comes from `supersedes` only. The seed `status` label and the date are not used for it. A document is current when no other document replaces it. Passages of replaced documents are not sent to the model. The reviewer still sees them.
-- The reviewer name is free text. There is no login.
-- Owners come from the map. The app never invents one. A question whose topic has no owner is shown as a load issue.
-- A question matches an approved answer when the topic and the normalized text are the same (exact match).
-- Load uses `INSERT OR IGNORE`, so a bumped version survives a restart. Use `make reset` to start again.
-- The bump endpoint adds 1 to a document version. It stands for a changed source in the demo.
+- `data/seed.json` has 5 documents, 8 questions (Q1 to Q8) and the topic-to-reviewer map. `data/domain.md` and `data/expected-seed-results.json` are copies of the supplied files. The app never changes them.
+- `data/demo.json` adds two questions. Q9 has a simulated failure for Case 6. Q10 has a simulated draft that says "Yes" and cites a passage that says the opposite, for the support check.
+- Authority comes from `supersedes` only. The seed `status` label and the date are not used. A document is current when no other document replaces it.
+- Owners come from the map. The app never invents one. A topic with no owner is shown as a load issue. The reviewer name is free text. There is no login.
+- A question matches an approved answer when the topic and the normalized text are the same.
+- Load uses `INSERT OR IGNORE`, so a bumped version survives a restart. Use `make reset` to start again. The bump endpoint adds 1 to a document version and stands for a changed source.
+- Only the supplied documents are evidence. There is no PDF reading, no embeddings and no CRM.
 
 ## Known limits
 
-- Support check: it is a second model call. It can be wrong. It adds a warning only. It never sets a status and never blocks Approve. The reviewer decides.
-- Citation check: code checks that each cited ID is one of the passages sent, and copies the passage text as the excerpt. It does not check that the model reads the passage correctly. The support check covers part of that.
-- Question matching: exact match after normalization. No fuzzy match. A question with two parts is not handled.
-- Passages: the model gets all passages of current documents. There is no search step. This works for a small collection only.
-- Hash change: a change of the model name, the settings, a prompt, or a passage text changes the `input_hash`. Replay then finds no entry until `make record` runs again.
-- Source change: a bump changes only the version number. Approving again does not check the citations against the passage text.
-- A question that has an approval but no draft of its own (a repeated question) cannot be edited. Its edit and note do nothing.
-- Editing an approved answer is not in this version.
-- Frontend: no automated tests. `make test` runs `tsc` and `vite build` for it. The screen is checked by hand with the QA notes. The reviewer name is free text. It starts as "Sales reviewer" and is not saved after a page reload.
-- Only the supplied documents are evidence. There is no PDF reading, no embeddings and no CRM.
-
-## Time spent
-
-No tool recorded the time. The table comes from the git history: the first and last commit of each work window. It shows the time the agent worked on tickets. It does not include the grilling, the specs, the reading of results and the hand checks.
-
-| Part | Commit window (2026-10-06 and 07) | Commits |
-| ---- | --------------------------------- | ------- |
-| S0, P1 | 06 Oct 15:52 to 17:49 | 9 |
-| P2 | 06 Oct 21:14 to 21:34 | 7 |
-| P3 | 06 Oct 22:51 to 23:01 | 6 |
-| P4 | 07 Oct 00:04 to 00:13 | 7 |
-| P5 | 07 Oct 01:01 to 01:22 | 7 |
-| P6 | 07 Oct 11:23 to the final commit | 9 (one for each ticket) |
-
-Total working time of the author, with planning and review: to confirm by the author.
+- **Checks:** code checks that each cited ID was sent and copies the passage text. It does not check that the answer reads the passage correctly. The support check covers part of that, but it is a model call and can be wrong. It adds a warning only, and the reviewer decides.
+- **Question matching:** exact match after normalization. No fuzzy match. A question with two parts is not handled.
+- **Passages:** the model gets all passages of current documents. There is no search step. This works for a small collection only.
+- **Replay:** a change of the model name, the settings, a prompt or a passage text changes the `input_hash`, and replay finds no entry until `make record` runs again.
+- **Review:** a bump changes only the version number, so approving again does not check the citations against the passage text. An approved answer is read only. A repeated question that has an approval but no draft of its own cannot be edited.
+- **Frontend:** no automated tests. `make test` runs `tsc` and `vite build` for it. The screen was checked by hand (see `docs/walkthrough.md`).
 
 ## Documents
 

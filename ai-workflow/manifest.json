@@ -27,12 +27,12 @@
       "files": [
         "ai-workflow/skills/"
       ],
-      "notes": "Nine user-level skills shaped the work (the eight records below and daisyui for the Part 6 Frontend). See the configuration records. The author copies the skill folders into ai-workflow/skills/ before hand-in."
+      "notes": "Eight user-level skills are shared, copied unchanged into ai-workflow/skills/: grilling, spec-blueprint, to-tickets, do-work-ticket, do-work-agents, bdd-tests, code-review and daisyui."
     },
     "agent_instructions_and_subagents": {
       "status": "used",
       "files": [],
-      "notes": "Kept outside the repository: AGENTS.md (two documentation links for the agent), the specs and ticket files (tasks/) and the design notes (.notes/). The author decides what to publish, so .gitignore lists AGENTS.md, tasks/ and .notes/. A coordinator session handed each ticket to a subagent that ran the do-work-ticket skill."
+      "notes": "Not shared"
     },
     "hooks_and_scripts": {
       "status": "used",
@@ -72,8 +72,8 @@
       "purpose": "Question the plan of each part before the spec was written.",
       "original_path_or_scope": "user-level skill (~/.claude/skills/grilling/)",
       "saved_path": "ai-workflow/skills/grilling/",
-      "version_or_commit": "user-level skill, no version; the author copies the folder before hand-in",
-      "used_during": "Before each part (S0, P1 to P6)",
+      "version_or_commit": "user-level skill, no version; copied unchanged",
+      "used_during": "Before each part",
       "status": "used",
       "redactions": []
     },
@@ -83,7 +83,7 @@
       "purpose": "Write spec.md with requirements, examples and the design of each part.",
       "original_path_or_scope": "user-level skill (~/.claude/skills/spec-blueprint/)",
       "saved_path": "ai-workflow/skills/spec-blueprint/",
-      "version_or_commit": "user-level skill, no version; the author copies the folder before hand-in",
+      "version_or_commit": "user-level skill, no version; copied unchanged",
       "used_during": "Before each part",
       "status": "used",
       "redactions": []
@@ -94,7 +94,7 @@
       "purpose": "Split each spec into tickets in tickets-*.md.",
       "original_path_or_scope": "user-level skill (~/.claude/skills/to-tickets/)",
       "saved_path": "ai-workflow/skills/to-tickets/",
-      "version_or_commit": "user-level skill, no version; the author copies the folder before hand-in",
+      "version_or_commit": "user-level skill, no version; copied unchanged",
       "used_during": "Before each part",
       "status": "used",
       "redactions": []
@@ -105,8 +105,19 @@
       "purpose": "Implement one ticket, or fix review findings, with one commit.",
       "original_path_or_scope": "user-level skill (~/.claude/skills/do-work-ticket/)",
       "saved_path": "ai-workflow/skills/do-work-ticket/",
-      "version_or_commit": "user-level skill, no version; the author copies the folder before hand-in",
+      "version_or_commit": "user-level skill, no version; copied unchanged",
       "used_during": "Every ticket commit",
+      "status": "used",
+      "redactions": []
+    },
+    {
+      "name": "do-work-agents",
+      "category": "skills",
+      "purpose": "Coordinate subagents that each implement one ticket.",
+      "original_path_or_scope": "user-level skill (~/.claude/skills/do-work-agents/)",
+      "saved_path": "ai-workflow/skills/do-work-agents/",
+      "version_or_commit": "user-level skill, no version; copied unchanged",
+      "used_during": "Parts 1 to 6, to hand tickets to subagents",
       "status": "used",
       "redactions": []
     },
@@ -116,7 +127,7 @@
       "purpose": "Write backend tests with GIVEN/WHEN/THEN comments and spec tags.",
       "original_path_or_scope": "user-level skill (~/.claude/skills/bdd-tests/)",
       "saved_path": "ai-workflow/skills/bdd-tests/",
-      "version_or_commit": "user-level skill, no version; the author copies the folder before hand-in",
+      "version_or_commit": "user-level skill, no version; copied unchanged",
       "used_during": "Every backend ticket",
       "status": "used",
       "redactions": []
@@ -127,30 +138,8 @@
       "purpose": "Review a ticket range against the spec and the standards.",
       "original_path_or_scope": "user-level skill (~/.claude/skills/code-review/)",
       "saved_path": "ai-workflow/skills/code-review/",
-      "version_or_commit": "user-level skill, no version; the author copies the folder before hand-in",
+      "version_or_commit": "user-level skill, no version; copied unchanged",
       "used_during": "The review fixes commits",
-      "status": "used",
-      "redactions": []
-    },
-    {
-      "name": "prototype",
-      "category": "skills",
-      "purpose": "Build the throwaway Inbox prototype that the screen follows.",
-      "original_path_or_scope": "user-level skill (~/.claude/skills/prototype/)",
-      "saved_path": "ai-workflow/skills/prototype/",
-      "version_or_commit": "user-level skill, no version; the author copies the folder before hand-in",
-      "used_during": "Before Part 6",
-      "status": "used",
-      "redactions": []
-    },
-    {
-      "name": "qa-notes",
-      "category": "skills",
-      "purpose": "Prove the critical examples and write qa-report.md.",
-      "original_path_or_scope": "user-level skill (~/.claude/skills/qa-notes/)",
-      "saved_path": "ai-workflow/skills/qa-notes/",
-      "version_or_commit": "user-level skill, no version; the author copies the folder before hand-in",
-      "used_during": "After each part",
       "status": "used",
       "redactions": []
     },
@@ -160,7 +149,7 @@
       "purpose": "Component classes for the Tailwind CSS 4 and daisyUI 5 Inbox screen (shell, queue, review panel, Sources tab).",
       "original_path_or_scope": "user-level skill (~/.claude/skills/daisyui/)",
       "saved_path": "ai-workflow/skills/daisyui/",
-      "version_or_commit": "user-level skill, no version; the author copies the folder before hand-in",
+      "version_or_commit": "user-level skill, no version; copied unchanged",
       "used_during": "Part 6 Frontend tickets T2 to T5",
       "status": "used",
       "redactions": []
