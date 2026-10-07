@@ -13,6 +13,8 @@ REPO_DIR = Path(__file__).resolve().parents[3]
 SEED_PATH = REPO_DIR / "data" / "seed.json"
 DEMO_PATH = REPO_DIR / "data" / "demo.json"
 REPLAY_PATH = REPO_DIR / "replay" / "responses.json"
+REFERENCE_PATH = REPO_DIR / "data" / "reference-cases.json"
+RESULTS_PATH = REPO_DIR / "docs" / "check-results.md"
 DEFAULT_DB_PATH = "qws.db"
 # The model is part of the input hash, so replay needs the same name that `make record` used.
 DEFAULT_MODEL_NAME = "gpt-6-luna"

@@ -1,4 +1,4 @@
-.PHONY: dev dev-api dev-web test types record
+.PHONY: dev dev-api dev-web test types record checks
 
 dev:
 	$(MAKE) -j2 dev-api dev-web
@@ -24,3 +24,8 @@ types:
 # Real model calls for the recording list; needs OPENAI_API_KEY (from the shell or .env).
 record:
 	cd backend && set -a && { [ ! -f ../.env ] || . ../.env; } && set +a && uv run python -m qws.services.recorder
+
+# The five checks and Case 6 in replay mode, no key; writes docs/check-results.md.
+# Use another Reference file with: make checks CASES=path/to/copy.json
+checks:
+	cd backend && uv run python -m qws.services.checks $(if $(CASES),$(abspath $(CASES)))

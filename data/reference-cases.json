@@ -1,0 +1,93 @@
+{
+  "cases": [
+    {
+      "id": "C1",
+      "question_id": "Q3",
+      "name": "Draft with a citation",
+      "source": "SUPPORT-v1:p1 says email support is available Monday to Friday, 09:00 to 17:00 UTC. domain.md rule 1: use only the supplied documents as evidence.",
+      "expected": {
+        "status": "draft",
+        "citations": ["SUPPORT-v1:p1"],
+        "answer_contains": ["09:00", "17:00", "UTC"],
+        "warning_kinds": []
+      }
+    },
+    {
+      "id": "C2",
+      "question_id": "Q2",
+      "name": "Undocumented feature is unresolved",
+      "source": "No passage mentions JSON export (EXPORT-v1:p1 and EXPORT-v2:p1 speak of CSV only). domain.md rule 1: an undocumented feature is unknown; rule 4: the exports topic goes to Product reviewer (seed.json owners).",
+      "expected": {
+        "status": "unresolved",
+        "owner": "Product reviewer",
+        "citations": [],
+        "allowed_actions": ["leave_open"]
+      }
+    },
+    {
+      "id": "C3",
+      "question_id": "Q1",
+      "name": "Older version conflicts",
+      "source": "EXPORT-v2:p1 (paid plans only) replaces EXPORT-v1:p1 (every plan) through the supersedes field. domain.md rule 2 and the worked example: the answer is no, cites EXPORT-v2:p1 and shows the old conflict.",
+      "expected": {
+        "status": "draft",
+        "citations": ["EXPORT-v2:p1"],
+        "replaced": ["EXPORT-v1:p1"],
+        "warning_kinds": ["superseded"],
+        "answer_starts_with": "No"
+      }
+    },
+    {
+      "id": "C4",
+      "question_id": "Q1",
+      "name": "Approved answer is reused",
+      "source": "domain.md rule 3: an unapproved edit is a draft; only an approved answer can be reused. Q1 cites EXPORT-v2:p1.",
+      "expected": {
+        "after_edit": {
+          "status": "draft",
+          "approved": false
+        },
+        "after_approve": {
+          "status": "approved",
+          "answer_is_edit": true
+        },
+        "ask_again_new_model_calls": 0
+      }
+    },
+    {
+      "id": "C5",
+      "question_id": "Q1",
+      "name": "Changed source needs review",
+      "source": "domain.md rule 3: mark an approved answer for review if a referenced document version changes. Q1 was approved on EXPORT-v2 version 2; a bump makes it version 3.",
+      "expected": {
+        "after_restart": {
+          "status": "approved",
+          "citations": ["EXPORT-v2:p1"]
+        },
+        "after_bump": {
+          "status": "needs_review",
+          "new_model_calls": 0,
+          "warning_kinds_include": ["source_changed"]
+        },
+        "after_reapprove": {
+          "source_versions": {"EXPORT-v2": 3}
+        }
+      }
+    },
+    {
+      "id": "C6",
+      "question_id": "Q9",
+      "name": "Model failure shows as an error",
+      "source": "blueprint Case 6: a failed model call shows as error with a short message, tested with a simulated failure. Q9 is the simulated timeout of data/demo.json. The other questions are still asked, so Q3 drafts from SUPPORT-v1:p1.",
+      "expected": {
+        "status": "error",
+        "error": "Model call failed: timeout.",
+        "label": "simulated",
+        "allowed_actions": ["retry"],
+        "after_run_all": {
+          "q3_status": "draft"
+        }
+      }
+    }
+  ]
+}
