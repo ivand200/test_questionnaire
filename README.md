@@ -180,14 +180,27 @@ Each model call is saved with its prompt, raw reply, model, settings, latency an
 - Source change: a bump changes only the version number. Approving again does not check the citations against the passage text.
 - A question that has an approval but no draft of its own (a repeated question) cannot be edited. Its edit and note do nothing.
 - Editing an approved answer is not in this version.
+- Frontend: no automated tests. `make test` runs `tsc` and `vite build` for it. The screen is checked by hand with the QA notes. The reviewer name is free text. It starts as "Sales reviewer" and is not saved after a page reload.
 - Only the supplied documents are evidence. There is no PDF reading, no embeddings and no CRM.
 
 ## Time spent
 
-To fill in.
+No tool recorded the time. The table comes from the git history: the first and last commit of each work window. It shows the time the agent worked on tickets. It does not include the grilling, the specs, the reading of results and the hand checks.
+
+| Part | Commit window (2026-10-06 and 07) | Commits |
+| ---- | --------------------------------- | ------- |
+| S0, P1 | 06 Oct 15:52 to 17:49 | 9 |
+| P2 | 06 Oct 21:14 to 21:34 | 7 |
+| P3 | 06 Oct 22:51 to 23:01 | 6 |
+| P4 | 07 Oct 00:04 to 00:13 | 7 |
+| P5 | 07 Oct 01:01 to 01:22 | 7 |
+| P6 | 07 Oct 11:23 to the final commit | 9 (one for each ticket) |
+
+Total working time of the author, with planning and review: to confirm by the author.
 
 ## Documents
 
 - `docs/check-results.md`: expected and observed values of the six cases.
+- `docs/walkthrough.md`: the approach, the decisions, and the list of 4 screenshots with their cases.
 - `docs/llm-usage.md`: tools, models, generated parts, one instruction, one correction.
 - `ai-workflow/`: the AI configuration record (`manifest.json` and `README.md`).

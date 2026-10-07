@@ -3,9 +3,10 @@
     "development_tools_and_models": {
       "status": "used",
       "files": [
-        "docs/llm-usage.md"
+        "docs/llm-usage.md",
+        "docs/walkthrough.md"
       ],
-      "notes": "Claude Code (CLI) with the model Claude Sonnet 5.5 (as in the commit attribution) wrote the code, tests and drafts of the documents. CLI version and tool settings: not-exportable (not recorded). To confirm by the author."
+      "notes": "Claude Code (CLI) with the model Claude Sonnet 5.5 (as in the commit attribution) wrote the code, tests and drafts of the documents, including the Frontend of Part 6 (Tailwind CSS 4 and daisyUI 5, with the /daisyui skill). CLI version and tool settings: not-exportable (not recorded). To confirm by the author."
     },
     "plugins_and_extensions": {
       "status": "not-used",
@@ -26,7 +27,7 @@
       "files": [
         "ai-workflow/skills/"
       ],
-      "notes": "Eight user-level skills shaped the work. See the configuration records. The author copies the skill folders into ai-workflow/skills/ before hand-in."
+      "notes": "Nine user-level skills shaped the work (the eight records below and daisyui for the Part 6 Frontend). See the configuration records. The author copies the skill folders into ai-workflow/skills/ before hand-in."
     },
     "agent_instructions_and_subagents": {
       "status": "used",
@@ -40,7 +41,7 @@
         "backend/src/qws/services/checks.py",
         "backend/src/qws/services/recorder.py"
       ],
-      "notes": "Scripts: make checks, make record, make reset, make start, make types. No hook was set up. To confirm by the author."
+      "notes": "Scripts: make checks, make record, make reset, make start, make types, make test. No hook was set up. To confirm by the author."
     },
     "prompts_and_rules": {
       "status": "used",
@@ -150,6 +151,17 @@
       "saved_path": "ai-workflow/skills/qa-notes/",
       "version_or_commit": "user-level skill, no version; the author copies the folder before hand-in",
       "used_during": "After each part",
+      "status": "used",
+      "redactions": []
+    },
+    {
+      "name": "daisyui",
+      "category": "skills",
+      "purpose": "Component classes for the Tailwind CSS 4 and daisyUI 5 Inbox screen (shell, queue, review panel, Sources tab).",
+      "original_path_or_scope": "user-level skill (~/.claude/skills/daisyui/)",
+      "saved_path": "ai-workflow/skills/daisyui/",
+      "version_or_commit": "user-level skill, no version; the author copies the folder before hand-in",
+      "used_during": "Part 6 Frontend tickets T2 to T5",
       "status": "used",
       "redactions": []
     }

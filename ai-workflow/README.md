@@ -8,7 +8,7 @@ Development time:
 
 | Tool | Use | Details |
 | ---- | --- | ------- |
-| Claude Code (CLI) | Wrote the backend, tests, Frontend and drafts of the documents, in small tickets | Model Claude Sonnet 5.5, as in the commit attribution. CLI version and settings: not-exportable (not recorded) |
+| Claude Code (CLI) | Wrote the backend, tests, Frontend (Tailwind CSS 4 and daisyUI 5) and drafts of the documents, in small tickets | Model Claude Sonnet 5.5, as in the commit attribution. CLI version and settings: not-exportable (not recorded) |
 
 Inside the app:
 
@@ -33,7 +33,7 @@ Plugins and extensions: `not-used`. MCP and tool settings: `not-used`. Hooks: no
 | Scripts | `used` | `Makefile`, `backend/src/qws/services/checks.py`, `backend/src/qws/services/recorder.py` |
 | Environment names | `used` | `.env.example` (names only) |
 
-Skills: eight user-level skills shaped the work: `grilling`, `spec-blueprint`, `to-tickets`, `do-work-ticket`, `bdd-tests`, `code-review`, `prototype` and `qa-notes`. The record of each skill points to `ai-workflow/skills/<name>/`. The author copies and trims these folders before hand-in; the repository has no copy yet. The list comes from the commit history and the files in `tasks/`. To confirm by the author.
+Skills: nine user-level skills shaped the work: `grilling`, `spec-blueprint`, `to-tickets`, `do-work-ticket`, `bdd-tests`, `code-review`, `prototype`, `qa-notes` and `daisyui` (the Part 6 Frontend). The record of each skill points to `ai-workflow/skills/<name>/`. The author copies and trims these folders before hand-in; the repository has no copy yet. The list comes from the commit history and the files in `tasks/`. To confirm by the author.
 
 Agent instructions and specs: kept outside the repository. The author decides what to publish, so `.gitignore` lists `AGENTS.md`, `tasks/` and `.notes/`. `AGENTS.md` has two links to documentation for the agent. A coordinator session handed each ticket to a subagent that ran the `do-work-ticket` skill.
 
