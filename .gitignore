@@ -1,7 +1,7 @@
 .env
 AGENTS.md
-# .notes/
-# tasks/
+.notes/
+tasks/
 .DS_Store
 node_modules
 .venv

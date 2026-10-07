@@ -85,3 +85,30 @@ def test_root_serves_frontend_built_after_startup(tmp_path):
     # THEN HTTP 200 with the built index.html, without restarting the Backend
     assert response.status_code == 200
     assert '<div id="root">' in response.text
+
+
+def test_client_route_serves_index_html(tmp_path):
+    # spec: 3.2-a
+    # GIVEN a built index.html in dist
+    client = make_client(make_dist(tmp_path))
+
+    # WHEN a client sends GET /questions/Q3 (a client route, not a built file)
+    response = client.get("/questions/Q3")
+
+    # THEN 200 with the content of index.html
+    assert response.status_code == 200
+    assert response.text == (tmp_path / "dist" / "index.html").read_text()
+
+
+def test_unknown_api_path_is_json_404(tmp_path):
+    # spec: 3.2-b
+    # GIVEN a built index.html in dist
+    client = make_client(make_dist(tmp_path))
+
+    # WHEN a client sends GET /api/nothing
+    response = client.get("/api/nothing")
+
+    # THEN 404 with a JSON body, not index.html
+    assert response.status_code == 404
+    assert response.headers["content-type"].startswith("application/json")
+    assert "detail" in response.json()

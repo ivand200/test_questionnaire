@@ -5,6 +5,9 @@ from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.staticfiles import StaticFiles
+from starlette.exceptions import HTTPException as StarletteHTTPException
+from starlette.responses import Response
+from starlette.types import Scope
 
 from qws.adapters.real_drafter import RealDrafter
 from qws.adapters.replay_drafter import ReplayDrafter
@@ -29,10 +32,22 @@ DIST_DIR = REPO_DIR / "frontend" / "dist"
 
 
 class LazyStaticFiles(StaticFiles):
-    """StaticFiles that tolerates a missing directory: requests 404 until it exists."""
+    """StaticFiles that tolerates a missing directory: requests 404 until it exists.
+
+    A path that is not `/api...` and not a built file gets `index.html`, so a reload of a
+    client route such as `/questions/Q3` works. An unknown `/api...` path stays a 404.
+    """
 
     async def check_config(self) -> None:
         pass
+
+    async def get_response(self, path: str, scope: Scope) -> Response:
+        try:
+            return await super().get_response(path, scope)
+        except StarletteHTTPException as exc:
+            if exc.status_code != 404 or path == "api" or path.startswith("api/"):
+                raise
+            return await super().get_response("index.html", scope)
 
 
 def drafter_from_env(config: DrafterConfig, replay_path: Path = REPLAY_PATH) -> Drafter:

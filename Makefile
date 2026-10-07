@@ -1,4 +1,4 @@
-.PHONY: dev dev-api dev-web test types record checks
+.PHONY: dev dev-api dev-web start reset test types record checks
 
 dev:
 	$(MAKE) -j2 dev-api dev-web
@@ -8,6 +8,17 @@ dev-api:
 
 dev-web:
 	cd frontend && pnpm exec vite
+
+# The finished app on one port: builds the Frontend, then the Backend serves it and /api/*.
+# Replay mode unless MODEL_MODE=real is set in the environment.
+start:
+	cd frontend && pnpm exec vite build
+	cd backend && uv run uvicorn qws.api.main:app --port 8000
+
+# Delete the Database file and its -wal and -shm files (DB_PATH if set, else backend/qws.db).
+# A relative DB_PATH counts from backend/, as it does for the app. No file is not an error.
+reset:
+	cd backend && db="$${DB_PATH:-qws.db}" && rm -f "$$db" "$$db-wal" "$$db-shm"
 
 test:
 	cd frontend && pnpm exec tsc --noEmit
