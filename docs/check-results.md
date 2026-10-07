@@ -1,7 +1,5 @@
 # Check results
 
-Run date: 2026-10-07
-
 | Case | Question | Expected | Observed | Result |
 | ---- | -------- | -------- | -------- | ------ |
 | C1 Draft with a citation | Q3 | status=draft; citations=[SUPPORT-v1:p1]; answer_contains=[09:00, 17:00, UTC]; warning_kinds=[] | status=draft; citations=[SUPPORT-v1:p1]; answer_contains=[09:00, 17:00, UTC]; warning_kinds=[] | PASS |
