@@ -64,7 +64,7 @@ def test_manifest_skill_records_point_to_the_skill_folder():
     assert all(r["saved_path"] == f"ai-workflow/skills/{r['name']}/" for r in skills)
 
 
-def test_llm_usage_marks_the_instruction_and_the_correction_for_the_author():
+def test_llm_usage_has_the_instruction_and_the_correction_with_its_commit():
     # spec: 9.3-a
     # GIVEN the LLM usage note
     text = LLM_USAGE.read_text()
@@ -72,8 +72,9 @@ def test_llm_usage_marks_the_instruction_and_the_correction_for_the_author():
     # WHEN a reader opens it
     sections = {h: body for h, body in re.findall(r"^## ([^\n]+)\n(.*?)(?=^## |\Z)", text, re.M | re.S)}
 
-    # THEN it lists tools and models and generated parts, and marks both sections
+    # THEN it lists tools and models and generated parts, shows both sections, and has no draft marker
     assert "Tools and models" in sections
     assert "Generated parts" in sections
-    assert "to confirm by the author" in sections["Instruction"]
-    assert "to confirm by the author" in sections["Correction and checks"]
+    assert "Business logic" in sections["Instruction"] or "business logic" in sections["Instruction"]
+    assert "772d77b" in sections["Correction and checks"]
+    assert "to confirm by the author" not in text

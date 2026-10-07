@@ -1,6 +1,6 @@
 # AI workflow used during this exercise
 
-The machine-readable record is `manifest.json`. This file explains it. The author confirms the points marked "to confirm by the author".
+The machine-readable record is `manifest.json`. This file explains it.
 
 ## Tools and models
 
@@ -21,7 +21,7 @@ Inside the app:
 
 The settings are in `backend/src/qws/config.py`. Each model call is saved in the Database with its prompt, raw reply, model and settings. Real replies are in `replay/responses.json`.
 
-Plugins and extensions: `not-used`. MCP and tool settings: `not-used`. Hooks: none set up. To confirm by the author.
+Plugins and extensions: `not-used`. MCP and tool settings: `not-used`. Hooks: none set up.
 
 ## Configuration files
 
@@ -41,7 +41,7 @@ Redactions: none. No credential, token or private URL is in this folder. The `.e
 
 ## One workflow example
 
-See `docs/llm-usage.md`. It has one instruction and one correction. Both are drafts from the git history, marked "to confirm by the author".
+See `docs/llm-usage.md`. It has one instruction and one correction, with the commit of the correction.
 
 ## Reproduce or replay
 

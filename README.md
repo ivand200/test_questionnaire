@@ -191,6 +191,6 @@ Each model call is saved with its prompt, raw reply, model, settings, latency an
 ## Documents
 
 - `docs/check-results.md`: expected and observed values of the six cases.
-- `docs/walkthrough.md`: the approach, the decisions, and the list of 4 screenshots with their cases.
+- `docs/walkthrough.md`: the approach, the decisions, and the list of 5 screenshots with their cases.
 - `docs/llm-usage.md`: tools, models, generated parts, one instruction, one correction.
 - `ai-workflow/`: the AI configuration record (`manifest.json` and `README.md`).
