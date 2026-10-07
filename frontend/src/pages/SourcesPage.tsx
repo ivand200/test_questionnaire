@@ -1,13 +1,14 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import { api } from "../api/client";
-import { useDocuments } from "../api/queries";
+import { useDocuments, useInvalidateWorkspace } from "../api/queries";
 import { useToast } from "../components/toast";
 
 // The Sources tab: one row for each document. The Bump button is the Case 5 demo in the browser.
 export function SourcesPage() {
   const queryClient = useQueryClient();
   const toast = useToast();
+  const invalidateWorkspace = useInvalidateWorkspace();
   const documents = useDocuments();
 
   const bump = useMutation({
@@ -19,11 +20,9 @@ export function SourcesPage() {
       return data;
     },
     onSuccess: (data) => {
-      // Documents, the queue (badges and warnings), the open question views and the Stats row reload.
+      // Documents reload too, besides the queue, the open question views and the Stats row.
       void queryClient.invalidateQueries({ queryKey: ["documents"] });
-      void queryClient.invalidateQueries({ queryKey: ["questions"] });
-      void queryClient.invalidateQueries({ queryKey: ["question"] });
-      void queryClient.invalidateQueries({ queryKey: ["summary"] });
+      void invalidateWorkspace();
       toast(`${data.id} is now version ${data.version}`);
     },
     onError: (e: Error) => toast(e.message, "error"),

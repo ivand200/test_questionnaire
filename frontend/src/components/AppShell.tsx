@@ -1,14 +1,14 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import { Link, Outlet, useRouterState } from "@tanstack/react-router";
 import { useState } from "react";
 
 import { api } from "../api/client";
-import { useHealth, useSummary } from "../api/queries";
+import { useHealth, useInvalidateWorkspace, useSummary } from "../api/queries";
 import { ApproverContext, DEFAULT_APPROVER } from "./approver";
 import { ToastProvider } from "./toast";
 
 export function AppShell() {
-  const queryClient = useQueryClient();
+  const invalidateWorkspace = useInvalidateWorkspace();
   const [approver, setApprover] = useState(DEFAULT_APPROVER);
   const onSources = useRouterState({ select: (s) => s.location.pathname.startsWith("/sources") });
   const health = useHealth();
@@ -21,11 +21,7 @@ export function AppShell() {
       if (error || !data) throw new Error("run all call failed");
       return data;
     },
-    onSettled: () => {
-      void queryClient.invalidateQueries({ queryKey: ["questions"] });
-      void queryClient.invalidateQueries({ queryKey: ["summary"] });
-      void queryClient.invalidateQueries({ queryKey: ["question"] });
-    },
+    onSettled: () => void invalidateWorkspace(),
   });
 
   return (

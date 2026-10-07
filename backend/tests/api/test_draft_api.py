@@ -90,7 +90,7 @@ def test_asking_for_q3_saves_a_draft_with_the_exact_passage_as_excerpt(tmp_path)
         assert body["status"] == "draft"
         assert body["answer"] == "Monday to Friday, 09:00–17:00 UTC"
         assert body["citations"] == [
-        {"passage_id": "SUPPORT-v1:p1", "excerpt": SUPPORT_EXCERPT, "version": None, "current_version": None, "date": "2026-08-01", "source_changed": False}
+        {"passage_id": "SUPPORT-v1:p1", "excerpt": SUPPORT_EXCERPT, "version": 1, "current_version": None, "date": "2026-08-01", "source_changed": False}
     ]
         # spec: 5.1-b
         statuses = {q["id"]: q["status"] for q in client.get("/api/questions").json()}
@@ -445,7 +445,7 @@ def test_get_question_returns_the_draft_view_with_allowed_actions(tmp_path):
     body = response.json()
     assert body["answer"] == "Monday to Friday, 09:00–17:00 UTC"
     assert body["citations"] == [
-        {"passage_id": "SUPPORT-v1:p1", "excerpt": SUPPORT_EXCERPT, "version": None, "current_version": None, "date": "2026-08-01", "source_changed": False}
+        {"passage_id": "SUPPORT-v1:p1", "excerpt": SUPPORT_EXCERPT, "version": 1, "current_version": None, "date": "2026-08-01", "source_changed": False}
     ]
     assert body["warnings"] == []
     assert body["allowed_actions"] == ["edit", "approve", "leave_open"]
@@ -519,6 +519,13 @@ def test_a_draft_citing_a_replacing_document_returns_the_replaced_evidence_and_a
     [warning] = body["warnings"]
     assert warning["kind"] == "superseded"
     assert warning["message"] == "EXPORT-v1 is replaced by EXPORT-v2. The answer uses EXPORT-v2."
+    # the warning carries the supersedes link and the older text; the draft citation has its version
+    assert (warning["document_id"], warning["supersedes_id"], warning["older_text"]) == (
+        "EXPORT-v2",
+        "EXPORT-v1",
+        "CSV exports are available on every plan.",
+    )
+    assert [(c["version"], c["current_version"]) for c in body["citations"]] == [(2, None)]
 
 
 def test_the_replaced_passage_is_not_in_the_saved_prompt_nor_stored_and_reads_agree(tmp_path):

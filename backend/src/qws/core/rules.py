@@ -131,8 +131,8 @@ def versioned_citations(
     documents: list[DocumentRow],
     passages: list[PassageRow],
 ) -> list[ViewCitation]:
-    """Each citation with the version of its document in the snapshot and its current version;
-    both None without a snapshot."""
+    """Each citation with the version of its document (the snapshot's, else the current one) and,
+    with a snapshot, its current version."""
     document_of = {p.id: p.document_id for p in passages}
     version_of = {d.id: d.version for d in documents}
     date_of = {d.id: d.date for d in documents}
@@ -140,7 +140,9 @@ def versioned_citations(
     return [
         ViewCitation(
             **c.model_dump(),
-            version=snapshot.get(document_of.get(c.passage_id, "")) if snapshot else None,
+            version=snapshot.get(document_of.get(c.passage_id, ""))
+            if snapshot
+            else version_of.get(document_of.get(c.passage_id, "")),
             current_version=version_of.get(document_of.get(c.passage_id, ""))
             if snapshot
             else None,
@@ -325,6 +327,7 @@ def superseded_evidence(
         if cited_document is None or old_document is None or old_document in seen:
             continue
         seen.add(old_document)
+        old_passages = [p for p in passages if p.document_id == old_document]
         replaced.extend(
             ReplacedEvidence(
                 passage_id=p.id,
@@ -333,8 +336,7 @@ def superseded_evidence(
                 version=document[old_document].version,
                 date=document[old_document].date,
             )
-            for p in passages
-            if p.document_id == old_document
+            for p in old_passages
         )
         warnings.append(
             Warning(
@@ -342,6 +344,9 @@ def superseded_evidence(
                 passage_id=None,
                 message=f"{old_document} is replaced by {cited_document}. "
                 f"The answer uses {cited_document}.",
+                document_id=cited_document,
+                supersedes_id=old_document,
+                older_text="\n".join(p.text for p in old_passages),
             )
         )
     return replaced, warnings

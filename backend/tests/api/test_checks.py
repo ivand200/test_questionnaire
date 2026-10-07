@@ -6,7 +6,7 @@ import pytest
 from qws.adapters.replay_file import read_entries
 from qws.config import REFERENCE_PATH, REPLAY_PATH, drafter_config, open_store
 from qws.core import rules
-from qws.services import checks
+from qws import checks
 
 IDS = ["C1", "C2", "C3", "C4", "C5", "C6"]
 

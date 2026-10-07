@@ -1,9 +1,10 @@
 import { useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { Link } from "@tanstack/react-router";
 
 import { api } from "../api/client";
 import type { components } from "../api/api.d.ts";
-import { useDocuments } from "../api/queries";
+import { useInvalidateWorkspace, useQuestion } from "../api/queries";
 import { useApprover } from "./approver";
 import { STATUS_VIEW } from "./status";
 import { useToast } from "./toast";
@@ -49,6 +50,18 @@ function WarningAlerts({ warnings }: { warnings: Warning[] }) {
           <div>
             <div className="font-semibold">{WARNING_TITLE[w.kind]}</div>
             <div className="text-sm">{w.message}</div>
+            {w.kind === "superseded" && w.supersedes_id && (
+              <>
+                <div className="mt-1 text-xs">
+                  <Link to="/sources" className="link font-mono">
+                    {w.document_id} supersedes {w.supersedes_id}
+                  </Link>
+                </div>
+                <blockquote className="mt-1 text-sm text-base-content/70 line-through">
+                  {w.older_text}
+                </blockquote>
+              </>
+            )}
           </div>
         </div>
       ))}
@@ -62,6 +75,7 @@ function EvidenceCard(props: {
   date: string | null | undefined;
   text: string;
   badge: React.ReactNode;
+  changed?: boolean;
   replacedBy?: string;
 }) {
   const replaced = props.replacedBy !== undefined;
@@ -74,7 +88,7 @@ function EvidenceCard(props: {
         {replaced ? (
           <span className="badge badge-warning badge-outline badge-sm">replaced</span>
         ) : (
-          <span className="badge badge-success badge-outline badge-sm">current</span>
+          !props.changed && <span className="badge badge-success badge-outline badge-sm">current</span>
         )}
       </div>
       <blockquote className={`mt-2 text-sm ${replaced ? "text-base-content/60 line-through" : ""}`}>
@@ -94,11 +108,6 @@ function EvidenceCard(props: {
 }
 
 function Evidence({ q }: { q: QuestionView }) {
-  const documents = useDocuments();
-  // A draft has no saved version yet: the version is the one the cited document has now.
-  const currentVersion = (passageId: string) =>
-    documents.data?.find((d) => d.passages.some((p) => p.id === passageId))?.version;
-
   if (q.citations.length === 0) {
     return (
       <div className="rounded-box border border-dashed border-base-300 p-4 text-sm text-base-content/70">
@@ -114,27 +123,25 @@ function Evidence({ q }: { q: QuestionView }) {
   }
   return (
     <div className="flex flex-col gap-2">
-      {q.citations.map((c) => {
-        const version = c.version ?? currentVersion(c.passage_id);
-        return (
-          <EvidenceCard
-            key={c.passage_id}
-            id={c.passage_id}
-            version={version}
-            date={c.date}
-            text={c.excerpt}
-            badge={
-              c.source_changed ? (
-                <span className="badge badge-accent badge-sm">
-                  approved on v{c.version}, now v{c.current_version}
-                </span>
-              ) : (
-                version != null && <span className="badge badge-ghost badge-sm">v{version}</span>
-              )
-            }
-          />
-        );
-      })}
+      {q.citations.map((c) => (
+        <EvidenceCard
+          key={c.passage_id}
+          id={c.passage_id}
+          version={c.version}
+          date={c.date}
+          text={c.excerpt}
+          changed={c.source_changed}
+          badge={
+            c.source_changed ? (
+              <span className="badge badge-accent badge-sm">
+                approved on v{c.version}, now v{c.current_version}
+              </span>
+            ) : (
+              c.version != null && <span className="badge badge-ghost badge-sm">v{c.version}</span>
+            )
+          }
+        />
+      ))}
       {q.replaced.map((r) => (
         <EvidenceCard
           key={r.passage_id}
@@ -218,24 +225,13 @@ function Provenance({ call }: { call: CallInfo | null | undefined }) {
 export function ReviewPanel({ questionId }: { questionId: string }) {
   const queryClient = useQueryClient();
   const toast = useToast();
-  const queryKey = ["question", questionId];
-
-  const question = useQuery({
-    queryKey,
-    queryFn: async () => {
-      const { data, error } = await api.GET("/api/questions/{question_id}", {
-        params: { path: { question_id: questionId } },
-      });
-      if (error || !data) throw new Error("question call failed");
-      return data;
-    },
-  });
+  const invalidateWorkspace = useInvalidateWorkspace();
+  const question = useQuestion(questionId);
 
   // The new view replaces the cached one; the queue and the Stats row reload.
   const saved = (data: QuestionView) => {
-    queryClient.setQueryData(queryKey, data);
-    void queryClient.invalidateQueries({ queryKey: ["questions"] });
-    void queryClient.invalidateQueries({ queryKey: ["summary"] });
+    queryClient.setQueryData(["question", questionId], data);
+    void invalidateWorkspace();
   };
   const failed = (e: Error) => toast(e.message, "error");
 

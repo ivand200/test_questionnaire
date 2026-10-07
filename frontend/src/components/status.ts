@@ -1,3 +1,5 @@
+import { useNavigate, useSearch } from "@tanstack/react-router";
+
 export type Status = "new" | "draft" | "unresolved" | "approved" | "needs_review" | "error";
 
 export const STATUSES: Status[] = ["draft", "unresolved", "needs_review", "approved", "error", "new"];
@@ -11,3 +13,12 @@ export const STATUS_VIEW: Record<Status, { label: string; text: string; badge: s
   needs_review: { label: "Needs review", text: "text-accent", badge: "badge-accent" },
   error: { label: "Error", text: "text-error", badge: "badge-error" },
 };
+
+// The queue filter lives in the address as ?status=; undefined means All.
+export function useStatusFilter() {
+  const navigate = useNavigate();
+  const active = useSearch({ strict: false }).status;
+  const select = (status: Status | undefined) =>
+    void navigate({ to: ".", search: (prev) => ({ ...prev, status }) });
+  return { active, select };
+}

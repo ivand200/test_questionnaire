@@ -51,9 +51,14 @@ class LazyStaticFiles(StaticFiles):
             return await super().get_response("index.html", scope)
 
 
+def model_mode() -> str:
+    """`real` when `MODEL_MODE=real`; anything else (empty too) is `replay`."""
+    return "real" if os.environ.get("MODEL_MODE") == "real" else "replay"
+
+
 def drafter_from_env(config: DrafterConfig, replay_path: Path = REPLAY_PATH) -> Drafter:
-    """`MODEL_MODE=real` asks the model; anything else (empty too) is replay."""
-    if os.environ.get("MODEL_MODE") == "real":
+    """The Drafter for the mode: the model when `real`, else the Replay file."""
+    if model_mode() == "real":
         return RealDrafter(config.model, os.environ.get("OPENAI_API_KEY", ""), config.settings)
     return ReplayDrafter(config.model, config.settings, replay_path)
 
@@ -81,8 +86,7 @@ def create_app(
 
     @app.get("/api/health")
     def health() -> dict[str, str]:
-        mode = "real" if os.environ.get("MODEL_MODE") == "real" else "replay"
-        return {"status": "ok", "mode": mode}
+        return {"status": "ok", "mode": model_mode()}
 
     @app.get("/api/documents")
     def documents(request: Request) -> list[DocumentView]:

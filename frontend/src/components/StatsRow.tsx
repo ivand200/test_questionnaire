@@ -1,7 +1,5 @@
-import { useNavigate, useSearch } from "@tanstack/react-router";
-
 import { useSummary } from "../api/queries";
-import { STATUS_VIEW, type Status } from "./status";
+import { STATUS_VIEW, useStatusFilter, type Status } from "./status";
 
 type Cell = {
   label: string;
@@ -11,18 +9,27 @@ type Cell = {
   desc: string;
 };
 
+const STATUS_DESC = {
+  unresolved: "no valid proof",
+  approved: "safe to reuse",
+  needs_review: "source changed",
+  error: "model failed",
+} as const;
+
 const CELLS: Cell[] = [
   { label: "Answered", status: undefined, value: "answered", tone: "draft", desc: "draft + approved" },
-  { label: "Unresolved", status: "unresolved", value: "unresolved", tone: "unresolved", desc: "no valid proof" },
-  { label: "Approved", status: "approved", value: "approved", tone: "approved", desc: "safe to reuse" },
-  { label: "Needs review", status: "needs_review", value: "needs_review", tone: "needs_review", desc: "source changed" },
-  { label: "Error", status: "error", value: "error", tone: "error", desc: "model failed" },
+  ...(Object.keys(STATUS_DESC) as (keyof typeof STATUS_DESC)[]).map((s) => ({
+    label: STATUS_VIEW[s].label,
+    status: s,
+    value: s,
+    tone: s,
+    desc: STATUS_DESC[s],
+  })),
 ];
 
 export function StatsRow() {
   const summary = useSummary();
-  const navigate = useNavigate();
-  const active = useSearch({ strict: false }).status;
+  const { active, select } = useStatusFilter();
   if (!summary.data) return null;
   const counts = summary.data;
   return (
@@ -33,7 +40,7 @@ export function StatsRow() {
           type="button"
           className={`stat text-left hover:bg-base-200 ${active === c.status ? "bg-base-200" : ""}`}
           aria-pressed={active === c.status}
-          onClick={() => void navigate({ to: ".", search: (prev) => ({ ...prev, status: c.status }) })}
+          onClick={() => select(c.status)}
         >
           <div className="stat-title">{c.label}</div>
           <div className={`stat-value text-3xl ${STATUS_VIEW[c.tone].text}`}>

@@ -39,4 +39,4 @@ record:
 # The five checks and Case 6 in replay mode, no key; writes docs/check-results.md.
 # Use another Reference file with: make checks CASES=path/to/copy.json
 checks:
-	cd backend && uv run python -m qws.services.checks $(if $(CASES),$(abspath $(CASES)))
+	cd backend && uv run python -m qws.checks $(if $(CASES),$(abspath $(CASES)))

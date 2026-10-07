@@ -394,8 +394,8 @@ export interface components {
         /**
          * ViewCitation
          * @description A citation as the view shows it. `version` is the cited document's version in the approved
-         *     snapshot; None while the answer is not approved. `current_version` is that document's version
-         *     now.
+         *     snapshot, or its version now while the answer is a draft. `current_version` is that document's
+         *     version now; None while the answer is not approved.
          */
         ViewCitation: {
             /** Passage Id */
@@ -431,6 +431,10 @@ export interface components {
             old_version?: number | null;
             /** New Version */
             new_version?: number | null;
+            /** Supersedes Id */
+            supersedes_id?: string | null;
+            /** Older Text */
+            older_text?: string | null;
         };
     };
     responses: never;

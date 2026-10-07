@@ -30,7 +30,7 @@ Plugins and extensions: `not-used`. MCP and tool settings: `not-used`. Hooks: no
 | Skills | `used` | `ai-workflow/skills/<name>/` for each record in `manifest.json` |
 | Agent instructions and subagents | `used`, kept outside the repository | `AGENTS.md`, `tasks/` (specs and tickets), `.notes/` (design notes) |
 | Prompts and rules | `used` | `backend/src/qws/core/rules.py`, `data/domain.md`, `data/reference-cases.json` |
-| Scripts | `used` | `Makefile`, `backend/src/qws/services/checks.py`, `backend/src/qws/services/recorder.py` |
+| Scripts | `used` | `Makefile`, `backend/src/qws/checks.py`, `backend/src/qws/services/recorder.py` |
 | Environment names | `used` | `.env.example` (names only) |
 
 Skills: nine user-level skills shaped the work: `grilling`, `spec-blueprint`, `to-tickets`, `do-work-ticket`, `bdd-tests`, `code-review`, `prototype`, `qa-notes` and `daisyui` (the Part 6 Frontend). The record of each skill points to `ai-workflow/skills/<name>/`. The author copies and trims these folders before hand-in; the repository has no copy yet. The list comes from the commit history and the files in `tasks/`. To confirm by the author.

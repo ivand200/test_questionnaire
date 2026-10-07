@@ -1,19 +1,13 @@
-import { useQuery } from "@tanstack/react-query";
-import { useNavigate, useParams, useSearch } from "@tanstack/react-router";
+import { useNavigate, useParams } from "@tanstack/react-router";
 import { useEffect } from "react";
 
-import { api } from "../api/client";
-import { STATUS_VIEW, type Status } from "./status";
+import { useQuestions } from "../api/queries";
+import { STATUS_VIEW, STATUSES, useStatusFilter, type Status } from "./status";
 
 // Filter grid order: All, then the six statuses.
 const FILTERS: { label: string; status: Status | undefined }[] = [
   { label: "All", status: undefined },
-  { label: "Draft", status: "draft" },
-  { label: "Unresolved", status: "unresolved" },
-  { label: "Needs review", status: "needs_review" },
-  { label: "Approved", status: "approved" },
-  { label: "Error", status: "error" },
-  { label: "Not asked", status: "new" },
+  ...STATUSES.map((status) => ({ label: STATUS_VIEW[status].label, status })),
 ];
 
 // j and k must not fire while the user types.
@@ -24,18 +18,9 @@ function isTyping(target: EventTarget | null): boolean {
 
 export function Queue() {
   const navigate = useNavigate();
-  const filter = useSearch({ strict: false }).status;
+  const { active: filter, select } = useStatusFilter();
   const selected = useParams({ strict: false }).questionId;
-  const questions = useQuery({
-    queryKey: ["questions", filter ?? "all"],
-    queryFn: async () => {
-      const { data, error } = await api.GET("/api/questions", {
-        params: { query: { status: filter } },
-      });
-      if (error || !data) throw new Error("questions call failed");
-      return data;
-    },
-  });
+  const questions = useQuestions(filter);
   const shown = questions.data ?? [];
 
   const open = (questionId: string) =>
@@ -77,9 +62,7 @@ export function Queue() {
               type="button"
               className={`btn btn-sm w-full px-2 ${filter === f.status ? "btn-active" : ""}`}
               aria-pressed={filter === f.status}
-              onClick={() =>
-                void navigate({ to: ".", search: (prev) => ({ ...prev, status: f.status }) })
-              }
+              onClick={() => select(f.status)}
             >
               {f.label}
             </button>

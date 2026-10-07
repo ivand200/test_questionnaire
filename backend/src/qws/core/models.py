@@ -94,8 +94,8 @@ class Citation(BaseModel):
 
 class ViewCitation(Citation):
     """A citation as the view shows it. `version` is the cited document's version in the approved
-    snapshot; None while the answer is not approved. `current_version` is that document's version
-    now."""
+    snapshot, or its version now while the answer is a draft. `current_version` is that document's
+    version now; None while the answer is not approved."""
 
     version: int | None = None
     current_version: int | None = None
@@ -119,10 +119,14 @@ class Warning(BaseModel):
     ]
     passage_id: str | None = None
     message: str
-    # Set for `source_changed`: the document and its approved and current versions.
+    # Set for `source_changed` and `superseded`: the document. `source_changed` also sets the
+    # approved and current versions.
     document_id: str | None = None
     old_version: int | None = None
     new_version: int | None = None
+    # Set for `superseded`: the older document that `document_id` supersedes, and its text.
+    supersedes_id: str | None = None
+    older_text: str | None = None
 
 
 class ReplacedEvidence(BaseModel):

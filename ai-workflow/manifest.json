@@ -38,7 +38,7 @@
       "status": "used",
       "files": [
         "Makefile",
-        "backend/src/qws/services/checks.py",
+        "backend/src/qws/checks.py",
         "backend/src/qws/services/recorder.py"
       ],
       "notes": "Scripts: make checks, make record, make reset, make start, make types, make test. No hook was set up. To confirm by the author."

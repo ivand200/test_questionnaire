@@ -48,7 +48,8 @@ Browser ── React app (Vite, TanStack Router and Query, generated types)
    ▼
 backend/src/qws
   api/        FastAPI routes, serves the built Frontend (index.html for deep links)
-  services/   DraftService, ReviewService, seed_loader, recorder, checks
+  services/   DraftService, ReviewService, seed_loader, recorder
+  checks.py   the `make checks` runner (drives the app through its API)
   core/       pure rules and Pydantic models (status, warnings, prompts, hashes)
   adapters/   Store (plain sqlite3), Drafter: RealDrafter, ReplayDrafter, SimulatedDrafter
 ```
