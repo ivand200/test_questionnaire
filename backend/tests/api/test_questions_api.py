@@ -63,6 +63,8 @@ def test_questions_lists_q1_to_q8_in_seed_order_all_new(tmp_path):
         "topic": "support",
         "text": "When is email support available?",
         "status": "new",
+        "owner": "Support reviewer",
+        "warning_count": 0,
     }
 
 

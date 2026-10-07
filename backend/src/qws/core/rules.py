@@ -9,7 +9,9 @@ from qws.core.models import (
     Checked,
     Citation,
     DocumentRow,
+    DocumentView,
     PassageRow,
+    PassageView,
     Prompt,
     QuestionRow,
     ReplacedEvidence,
@@ -133,6 +135,7 @@ def versioned_citations(
     both None without a snapshot."""
     document_of = {p.id: p.document_id for p in passages}
     version_of = {d.id: d.version for d in documents}
+    date_of = {d.id: d.date for d in documents}
     changed = changed_sources(snapshot, documents) if snapshot else {}
     return [
         ViewCitation(
@@ -141,9 +144,29 @@ def versioned_citations(
             current_version=version_of.get(document_of.get(c.passage_id, ""))
             if snapshot
             else None,
+            date=date_of.get(document_of.get(c.passage_id, "")),
             source_changed=document_of.get(c.passage_id, "") in changed,
         )
         for c in citations
+    ]
+
+
+def document_views(
+    documents: list[DocumentRow], passages: list[PassageRow]
+) -> list[DocumentView]:
+    """Every document in the given order. `replaced_by` is the document whose `supersedes_id` is
+    this one; the `status` label is not copied."""
+    replaced_by = {d.supersedes_id: d.id for d in documents if d.supersedes_id}
+    return [
+        DocumentView(
+            id=d.id,
+            version=d.version,
+            date=d.date,
+            supersedes_id=d.supersedes_id,
+            replaced_by=replaced_by.get(d.id),
+            passages=[PassageView(id=p.id, text=p.text) for p in passages if p.document_id == d.id],
+        )
+        for d in documents
     ]
 
 
@@ -292,6 +315,7 @@ def superseded_evidence(
     """
     document_of = {p.id: p.document_id for p in passages}
     supersedes = {d.id: d.supersedes_id for d in documents}
+    document = {d.id: d for d in documents}
     replaced: list[ReplacedEvidence] = []
     warnings: list[Warning] = []
     seen: set[str] = set()
@@ -302,7 +326,13 @@ def superseded_evidence(
             continue
         seen.add(old_document)
         replaced.extend(
-            ReplacedEvidence(passage_id=p.id, excerpt=p.text, replaced_by=cited_document)
+            ReplacedEvidence(
+                passage_id=p.id,
+                excerpt=p.text,
+                replaced_by=cited_document,
+                version=document[old_document].version,
+                date=document[old_document].date,
+            )
             for p in passages
             if p.document_id == old_document
         )

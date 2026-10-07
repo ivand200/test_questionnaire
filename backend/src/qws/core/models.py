@@ -99,6 +99,7 @@ class ViewCitation(Citation):
 
     version: int | None = None
     current_version: int | None = None
+    date: str | None = None  # the date of the cited document; None for a passage not found
     # True when the document changed after approval; the Backend decides, the Frontend only draws.
     source_changed: bool = False
 
@@ -130,6 +131,8 @@ class ReplacedEvidence(BaseModel):
     passage_id: str
     excerpt: str
     replaced_by: str  # ID of the cited document that replaces it
+    version: int  # the version of the replaced document
+    date: str  # the date of the replaced document
 
 
 class Prompt(BaseModel):
@@ -207,6 +210,8 @@ class QuestionSummary(BaseModel):
     topic: str
     text: str
     status: Status
+    owner: str | None
+    warning_count: int  # the number of warnings in the question view
 
 
 class SummaryCounts(BaseModel):
@@ -242,6 +247,30 @@ class Approval(BaseModel):
     source_versions: dict[str, int]
 
 
+class CallInfo(BaseModel):
+    """The model call that made the draft. `when` is its `created_at`."""
+
+    label: Label
+    model: str
+    when: str
+
+
+class PassageView(BaseModel):
+    id: str
+    text: str
+
+
+class DocumentView(BaseModel):
+    """A document for the Sources tab. `replaced_by` is computed; the `status` label is not shown."""
+
+    id: str
+    version: int
+    date: str
+    supersedes_id: str | None
+    replaced_by: str | None
+    passages: list[PassageView]
+
+
 class QuestionView(BaseModel):
     id: str
     topic: str
@@ -253,6 +282,7 @@ class QuestionView(BaseModel):
     owner: str | None
     replaced: list[ReplacedEvidence]
     label: Label | None
+    call: CallInfo | None
     error: str | None
     edited: bool
     note: str | None

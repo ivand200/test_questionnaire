@@ -19,7 +19,8 @@ from qws.config import (
     drafter_config,
     open_store,
 )
-from qws.core.models import ApproveRequest, BumpResult, EditRequest, LeaveOpenRequest, LoadIssue, QuestionSummary, QuestionView, RunAllResult, Status, SummaryCounts, UnknownQuestion
+from qws.core.models import ApproveRequest, BumpResult, DocumentView, EditRequest, LeaveOpenRequest, LoadIssue, QuestionSummary, QuestionView, RunAllResult, Status, SummaryCounts, UnknownQuestion
+from qws.core import rules
 from qws.services.draft_service import (
     Conflict,
     DraftService,
@@ -80,7 +81,13 @@ def create_app(
 
     @app.get("/api/health")
     def health() -> dict[str, str]:
-        return {"status": "ok"}
+        mode = "real" if os.environ.get("MODEL_MODE") == "real" else "replay"
+        return {"status": "ok", "mode": mode}
+
+    @app.get("/api/documents")
+    def documents(request: Request) -> list[DocumentView]:
+        store = request.app.state.store
+        return rules.document_views(store.list_documents(), store.list_passages())
 
     @app.get("/api/load-issues")
     def load_issues(request: Request) -> list[LoadIssue]:

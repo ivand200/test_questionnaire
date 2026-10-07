@@ -8,6 +8,7 @@ from qws.core import rules
 from qws.core.models import (
     Approval,
     ApprovedRow,
+    CallInfo,
     Citation,
     DocumentRow,
     DraftRow,
@@ -78,30 +79,26 @@ class Store:
             )
 
     def list_questions(self, status: Status | None = None) -> list[QuestionSummary]:
-        """Every question in Seed order with its status; only those with `status` when it is set."""
+        """Every question in Seed order with its status; only those with `status` when it is set.
+
+        Each row is made from the question view, so the status, owner and `warning_count` of the
+        queue and of the panel come from one place.
+        """
         with self._connect() as conn:
-            rows = conn.execute(
-                "SELECT q.id, q.topic, q.text, d.status AS draft_status,"
-                " a.source_versions AS snapshot"
-                " FROM question q LEFT JOIN draft d ON d.question_id = q.id"
-                " LEFT JOIN approved_answer a ON a.question_hash = q.question_hash"
-                " ORDER BY q.rowid"
-            ).fetchall()
-        documents = self.list_documents()
-        found = [
+            ids = [r["id"] for r in conn.execute("SELECT id FROM question ORDER BY rowid")]
+        views = [view for question_id in ids if (view := self.get_question_view(question_id))]
+        return [
             QuestionSummary(
-                id=r["id"],
-                topic=r["topic"],
-                text=r["text"],
-                status=rules.question_status(
-                    json.loads(r["snapshot"]) if r["snapshot"] is not None else None,
-                    documents,
-                    r["draft_status"],
-                ),
+                id=v.id,
+                topic=v.topic,
+                text=v.text,
+                status=v.status,
+                owner=v.owner,
+                warning_count=len(v.warnings),
             )
-            for r in rows
+            for v in views
+            if status is None or v.status == status
         ]
-        return [q for q in found if status is None or q.status == status]
 
     def summary(self) -> SummaryCounts:
         """The count of questions per computed status."""
@@ -143,6 +140,7 @@ class Store:
             owner=self.get_owner(question.topic),
             replaced=replaced,
             label=draft.label if draft else None,
+            call=self.get_call(question_id),
             error=draft.error if draft and status == "error" else None,
             edited=edited,
             note=draft.note if draft else None,
@@ -155,6 +153,16 @@ class Store:
             else None,
             allowed_actions=rules.allowed_actions(status),
         )
+
+    def get_call(self, question_id: str) -> CallInfo | None:
+        """The model call that the draft row points at; None when the question has no draft."""
+        with self._connect() as conn:
+            row = conn.execute(
+                "SELECT m.label, m.model, m.created_at AS \"when\" FROM draft d"
+                " JOIN model_call m ON m.id = d.model_call_id WHERE d.question_id = ?",
+                (question_id,),
+            ).fetchone()
+        return CallInfo(**dict(row)) if row else None
 
     def get_owner(self, topic: str) -> str | None:
         """The reviewer of a topic from the owner table; None when the topic has no row."""

@@ -21,6 +21,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/documents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Documents */
+        get: operations["documents_api_documents_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/load-issues": {
         parameters: {
             query?: never;
@@ -202,6 +219,39 @@ export interface components {
             /** Version */
             version: number;
         };
+        /**
+         * CallInfo
+         * @description The model call that made the draft. `when` is its `created_at`.
+         */
+        CallInfo: {
+            /**
+             * Label
+             * @enum {string}
+             */
+            label: "real" | "cached" | "simulated";
+            /** Model */
+            model: string;
+            /** When */
+            when: string;
+        };
+        /**
+         * DocumentView
+         * @description A document for the Sources tab. `replaced_by` is computed; the `status` label is not shown.
+         */
+        DocumentView: {
+            /** Id */
+            id: string;
+            /** Version */
+            version: number;
+            /** Date */
+            date: string;
+            /** Supersedes Id */
+            supersedes_id: string | null;
+            /** Replaced By */
+            replaced_by: string | null;
+            /** Passages */
+            passages: components["schemas"]["PassageView"][];
+        };
         /** EditRequest */
         EditRequest: {
             /** Answer */
@@ -229,6 +279,13 @@ export interface components {
             /** Message */
             message: string;
         };
+        /** PassageView */
+        PassageView: {
+            /** Id */
+            id: string;
+            /** Text */
+            text: string;
+        };
         /** QuestionSummary */
         QuestionSummary: {
             /** Id */
@@ -242,6 +299,10 @@ export interface components {
              * @enum {string}
              */
             status: "new" | "draft" | "unresolved" | "approved" | "needs_review" | "error";
+            /** Owner */
+            owner: string | null;
+            /** Warning Count */
+            warning_count: number;
         };
         /** QuestionView */
         QuestionView: {
@@ -268,6 +329,7 @@ export interface components {
             replaced: components["schemas"]["ReplacedEvidence"][];
             /** Label */
             label: ("real" | "cached" | "simulated") | null;
+            call: components["schemas"]["CallInfo"] | null;
             /** Error */
             error: string | null;
             /** Edited */
@@ -289,6 +351,10 @@ export interface components {
             excerpt: string;
             /** Replaced By */
             replaced_by: string;
+            /** Version */
+            version: number;
+            /** Date */
+            date: string;
         };
         /** RunAllResult */
         RunAllResult: {
@@ -340,6 +406,8 @@ export interface components {
             version?: number | null;
             /** Current Version */
             current_version?: number | null;
+            /** Date */
+            date?: string | null;
             /**
              * Source Changed
              * @default false
@@ -391,6 +459,26 @@ export interface operations {
                     "application/json": {
                         [key: string]: string;
                     };
+                };
+            };
+        };
+    };
+    documents_api_documents_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DocumentView"][];
                 };
             };
         };
