@@ -9,12 +9,10 @@ export function Workspace({ children }: { children?: ReactNode }) {
   return (
     <>
       <StatsRow />
-      <main style={{ display: "flex", gap: "2rem", alignItems: "flex-start" }}>
-        <div style={{ flex: 1 }}>
-          <LoadIssues />
-          <Queue />
-        </div>
-        {children && <div style={{ flex: 1 }}>{children}</div>}
+      <LoadIssues />
+      <main className="grid items-start gap-4 lg:grid-cols-[minmax(20rem,24rem)_minmax(0,1fr)]">
+        <Queue />
+        {children && <div>{children}</div>}
       </main>
     </>
   );
