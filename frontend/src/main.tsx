@@ -8,10 +8,19 @@ import {
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 
+import "./index.css";
+import { AppShell } from "./components/AppShell";
+import { STATUSES, type Status } from "./components/status";
 import { HomePage } from "./pages/HomePage";
 import { QuestionPage } from "./pages/QuestionPage";
+import { SourcesPage } from "./pages/SourcesPage";
 
-const rootRoute = createRootRoute();
+// The queue filter lives in the address as ?status=. A value that is not a status is dropped.
+const rootRoute = createRootRoute({
+  component: AppShell,
+  validateSearch: (search: Record<string, unknown>): { status?: Status } =>
+    STATUSES.includes(search.status as Status) ? { status: search.status as Status } : {},
+});
 const indexRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/",
@@ -22,8 +31,13 @@ const questionRoute = createRoute({
   path: "/questions/$questionId",
   component: QuestionPage,
 });
+const sourcesRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/sources",
+  component: SourcesPage,
+});
 const router = createRouter({
-  routeTree: rootRoute.addChildren([indexRoute, questionRoute]),
+  routeTree: rootRoute.addChildren([indexRoute, questionRoute, sourcesRoute]),
 });
 
 declare module "@tanstack/react-router" {

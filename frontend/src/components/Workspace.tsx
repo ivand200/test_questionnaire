@@ -1,19 +1,14 @@
-import { useState, type ReactNode } from "react";
+import type { ReactNode } from "react";
 
-import { ApproverContext, DEFAULT_APPROVER } from "./approver";
 import { LoadIssues } from "./LoadIssues";
 import { Queue } from "./Queue";
+import { StatsRow } from "./StatsRow";
 
+// The Questionnaire tab: Stats row, then the queue with the review panel beside it.
 export function Workspace({ children }: { children?: ReactNode }) {
-  const [approver, setApprover] = useState(DEFAULT_APPROVER);
   return (
-    <ApproverContext.Provider value={approver}>
-      <header>
-        <label>
-          Approver{" "}
-          <input value={approver} onChange={(e) => setApprover(e.target.value)} />
-        </label>
-      </header>
+    <>
+      <StatsRow />
       <main style={{ display: "flex", gap: "2rem", alignItems: "flex-start" }}>
         <div style={{ flex: 1 }}>
           <LoadIssues />
@@ -21,6 +16,6 @@ export function Workspace({ children }: { children?: ReactNode }) {
         </div>
         {children && <div style={{ flex: 1 }}>{children}</div>}
       </main>
-    </ApproverContext.Provider>
+    </>
   );
 }

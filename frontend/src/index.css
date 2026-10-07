@@ -1,0 +1,9 @@
+@import "tailwindcss";
+@plugin "daisyui";
+
+/* daisyUI's default themes: light, and dark when the system asks for it. */
+body {
+  background: var(--color-base-200);
+  color: var(--color-base-content);
+  font-size: 14px;
+}
