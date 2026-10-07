@@ -164,6 +164,11 @@ class Store:
             ).fetchone()
         return CallInfo(**dict(row)) if row else None
 
+    def count_model_calls(self) -> int:
+        """Read only: how many model calls are stored."""
+        with self._connect() as conn:
+            return conn.execute("SELECT COUNT(*) FROM model_call").fetchone()[0]
+
     def get_owner(self, topic: str) -> str | None:
         """The reviewer of a topic from the owner table; None when the topic has no row."""
         with self._connect() as conn:

@@ -66,7 +66,7 @@ def test_make_checks_passes_all_six_cases_and_writes_six_rows(tmp_path, capsys):
     assert code == 0
     assert [line.split()[0] for line in lines] == IDS
     assert all(" PASS " in line for line in lines)
-    rows = [l for l in results.read_text().splitlines() if l.startswith("| C") and l[3].isdigit()]
+    rows = [ln for ln in results.read_text().splitlines() if ln.startswith("| C") and ln[3].isdigit()]
     assert len(rows) == 6
 
 
@@ -185,5 +185,5 @@ def test_the_results_file_has_the_date_the_header_six_rows_and_none_under_failur
     text = results.read_text()
     assert "Run date: 20" in text
     assert "| Case | Question | Expected | Observed | Result |" in text
-    assert len([l for l in text.splitlines() if l.startswith("| C") and l[3].isdigit()]) == 6
+    assert len([ln for ln in text.splitlines() if ln.startswith("| C") and ln[3].isdigit()]) == 6
     assert text.split("## Failures")[1].strip() == "None."

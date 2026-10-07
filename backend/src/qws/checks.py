@@ -1,7 +1,6 @@
 """`make checks`: run the six Reference cases in replay mode and write the Check results file."""
 
 import json
-import sqlite3
 import sys
 import tempfile
 from collections.abc import Callable, Iterator
@@ -15,6 +14,7 @@ from fastapi.testclient import TestClient
 from pydantic import BaseModel, TypeAdapter, ValidationError
 
 from qws.adapters.replay_drafter import ReplayDrafter
+from qws.adapters.store import Store
 from qws.api.main import create_app
 from qws.config import REFERENCE_PATH, REPLAY_PATH, RESULTS_PATH, drafter_config
 
@@ -65,7 +65,7 @@ class Session:
 
     def __init__(self, client: TestClient, db_path: Path) -> None:
         self.client = client
-        self._db_path = db_path
+        self._store = Store(db_path)
 
     def view(self, question_id: str) -> dict:
         return self.client.get(f"/api/questions/{question_id}").json()
@@ -89,11 +89,7 @@ class Session:
 
     def model_calls(self) -> int:
         """Read only: the count of model calls in the Database."""
-        conn = sqlite3.connect(f"file:{self._db_path}?mode=ro", uri=True)
-        try:
-            return conn.execute("SELECT COUNT(*) FROM model_call").fetchone()[0]
-        finally:
-            conn.close()
+        return self._store.count_model_calls()
 
 
 @contextmanager

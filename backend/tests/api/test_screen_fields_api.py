@@ -1,9 +1,8 @@
 import json
 import sqlite3
 
-from conftest import make_client
+from conftest import ScriptedDrafter, make_client
 from qws.config import SEED_PATH
-from test_run_all_api import ScriptedDrafter
 
 
 def created_at_of_draft_call(tmp_path, question_id: str) -> str:
